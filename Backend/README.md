@@ -180,3 +180,68 @@ The 3D viewer transform fields (position/rotation/scale) you added to the Model
 table are NOT yet in the update schema. They'll be wired into ModelUpdateSchema
 when we build the asset upload / edit flow (Phase 6) so the admin "Edit 3D Model"
 panel can write them.
+
+---
+
+# Phase 6 — File Storage & 3D Asset Uploads
+
+Local filesystem storage behind a provider-independent abstraction, with
+validated uploads. Swappable to Cloudflare R2 / S3 later via config only.
+
+## New pieces
+
+- `app/services/storage/base.py`    — StorageService interface (save/delete/exists/get_url)
+- `app/services/storage/local.py`   — LocalStorageService (writes to backend/storage/)
+- `app/services/storage/factory.py` — picks backend from STORAGE_BACKEND
+- `app/services/file_validation.py` — extension + size + magic-byte checks
+- `app/repositories/asset_repository.py`
+- `app/services/asset_service.py`   — ties validation + storage + DB together
+- `app/schemas/asset.py`            — asset output with resolved url
+- `app/routes/files.py`             — serves local files at /files/<key>
+- `app/routes/admin/assets.py`      — upload/list/delete endpoints
+
+## Endpoints
+
+    GET    /api/admin/models/<model_id>/assets
+    POST   /api/admin/models/<model_id>/assets      (multipart/form-data)
+    DELETE /api/admin/models/<model_id>/assets/<asset_id>
+    GET    /files/<storage_key>                      (local file serving)
+
+## Uploading (multipart, NOT json)
+
+POST /api/admin/models/<id>/assets with form-data fields:
+  - `file`       : the binary file
+  - `asset_type` : MODEL | TEXTURE | THUMBNAIL | ANIMATION | OTHER
+
+## How files are stored
+
+- DB stores only a `storage_key` string, e.g.
+      models/mech-warrior/thumbnail/preview.png
+- The actual bytes go to `backend/storage/<storage_key>` locally.
+- `get_url()` turns the key into a fetchable URL (`/files/...` locally,
+  a CDN URL on R2 later). The key never changes — only the backend does.
+
+## Validation (never trusts the client)
+
+- asset_type must be valid
+- extension must be allowed for that asset_type
+- size within MAX_UPLOAD_MB
+- magic-byte sniff catches spoofed extensions (e.g. text renamed .png -> rejected)
+- storage keys are traversal-safe (../ escapes blocked)
+
+## Verified in this drop
+
+- valid PNG uploads, lands on disk, served via /files, appears in model GET
+- spoofed extension -> 422 CONTENT_MISMATCH
+- disallowed extension (.exe) -> 422 INVALID_EXTENSION
+- invalid asset_type -> 422
+- upload without auth -> 401
+- delete removes the file from disk
+- path traversal blocked
+
+## Switching to R2 later (no code changes to callers)
+
+1. Implement `R2StorageService(StorageService)` (S3 API via boto3).
+2. Uncomment the r2 branch in `storage/factory.py`.
+3. Set STORAGE_BACKEND=r2 and R2_* env vars.
+Business logic and routes stay identical because they only use the interface.

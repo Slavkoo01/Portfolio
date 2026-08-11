@@ -1,7 +1,9 @@
 """Model schemas (marshmallow 4.x): validation in, serialization out."""
 from __future__ import annotations
 
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, post_dump
+
+from app.services.storage.factory import get_storage
 
 SLUG_REGEX = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
 
@@ -21,6 +23,12 @@ class ModelAssetOutSchema(Schema):
     storage_key = fields.String()
     mime_type = fields.String(allow_none=True)
     file_size = fields.Integer(allow_none=True)
+
+    @post_dump
+    def add_url(self, data, **kwargs):
+        if data.get("storage_key"):
+            data["url"] = get_storage().get_url(data["storage_key"])
+        return data
 
 
 class ModelAnimationOutSchema(Schema):
