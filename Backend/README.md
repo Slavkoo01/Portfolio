@@ -115,3 +115,68 @@ role-based route guards.
 - /me reflects login state
 - state-changing request without CSRF header -> 403 CSRF_MISSING
 - non-admin hitting an @admin_required route -> 403 FORBIDDEN
+
+---
+
+# Phase 5 — Model & Project CRUD
+
+Full create/read/update/delete for models and projects, with slug generation,
+publish/draft filtering, soft delete, and pagination.
+
+## New pieces
+
+- `app/utils/slug.py`                    — slugify + unique-slug generation
+- `app/repositories/model_repository.py` — Model + ModelCategory queries
+- `app/repositories/project_repository.py`
+- `app/services/model_service.py`        — model business logic
+- `app/services/project_service.py`
+- `app/schemas/model.py` / `project.py` / `common.py`
+- `app/routes/public.py`                 — public read-only endpoints
+- `app/routes/admin/models.py` / `projects.py`
+
+## Public endpoints (no auth, published + non-deleted only)
+
+    GET /api/models?page=1&per_page=20&category=<slug>&featured=true
+    GET /api/models/categories
+    GET /api/models/<slug>
+    GET /api/projects?page=1&per_page=20&featured=true
+    GET /api/projects/<slug>
+
+## Admin endpoints (ADMIN + CSRF, see drafts)
+
+    GET    /api/admin/models
+    GET    /api/admin/models/<id>
+    POST   /api/admin/models
+    PUT    /api/admin/models/<id>
+    DELETE /api/admin/models/<id>     (soft delete)
+    (same shape for /api/admin/projects)
+
+## Create-model body (POST /api/admin/models)
+
+    {
+      "title": "Mech Warrior",       // required; slug auto-generated if omitted
+      "slug": "mech-warrior",        // optional, must be lowercase-hyphenated
+      "description": "...",
+      "category_id": 1,               // optional, must exist
+      "is_featured": false,
+      "is_published": false,          // draft by default
+      "polygon_count": 45678,
+      "vertex_count": 23456
+    }
+
+## Behaviour verified in this drop
+
+- draft models/projects are hidden from public list + detail (404), visible to admin
+- publishing makes them appear publicly
+- duplicate title auto-dedupes slug (mech-warrior -> mech-warrior-2)
+- explicit duplicate slug -> 422 SLUG_TAKEN
+- invalid slug format -> 422
+- soft delete removes from both public and admin listings
+- unauthenticated admin write -> 401
+
+## Note on transform columns
+
+The 3D viewer transform fields (position/rotation/scale) you added to the Model
+table are NOT yet in the update schema. They'll be wired into ModelUpdateSchema
+when we build the asset upload / edit flow (Phase 6) so the admin "Edit 3D Model"
+panel can write them.
