@@ -45,6 +45,10 @@ def create_app(config_name: str | None = None) -> Flask:
     register_error_handlers(app)
     register_blueprints(app)
 
+    # --- CLI commands (flask create-admin, etc.) ---
+    from app.cli import register_cli
+    register_cli(app)
+
     return app
 
 

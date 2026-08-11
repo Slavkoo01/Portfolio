@@ -8,7 +8,6 @@ from sqlalchemy import (
     CheckConstraint,
     ForeignKey,
     Integer,
-    Float, 
     Numeric,
     SmallInteger,
     String,
@@ -77,19 +76,6 @@ class Model(Base, TimestampMixin, SoftDeleteMixin):
 
     polygon_count: Mapped[int | None] = mapped_column(Integer)
     vertex_count: Mapped[int | None] = mapped_column(Integer)
-
-    position_x: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, server_default="0")
-    position_y: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, server_default="0")
-    position_z: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, server_default="0")
-
-    rotation_x: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, server_default="0")
-    rotation_y: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, server_default="0")
-    rotation_z: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, server_default="0")
-
-    scale_x: Mapped[float] = mapped_column(Float, nullable=False, default=1.0, server_default="1")
-    scale_y: Mapped[float] = mapped_column(Float, nullable=False, default=1.0, server_default="1")
-    scale_z: Mapped[float] = mapped_column(Float, nullable=False, default=1.0, server_default="1")
-
 
     # --- relationships ---
     owner: Mapped["User"] = relationship(back_populates="models")

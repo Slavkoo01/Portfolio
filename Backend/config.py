@@ -45,6 +45,9 @@ class BaseConfig:
     # Name of the non-HttpOnly CSRF cookie the frontend reads and echoes back.
     CSRF_COOKIE_NAME = "csrf_token"
     CSRF_HEADER_NAME = "X-CSRF-Token"
+    # How long a login session cookie stays valid.
+    from datetime import timedelta as _timedelta
+    PERMANENT_SESSION_LIFETIME = _timedelta(days=7)
 
     # --- Storage ---
     STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local")

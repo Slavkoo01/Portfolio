@@ -18,9 +18,11 @@ def health():
 
 
 def register_blueprints(app: Flask) -> None:
+    from app.routes.auth import auth_bp
+
     app.register_blueprint(health_bp)
+    app.register_blueprint(auth_bp)
     # Later phases will add:
-    #   app.register_blueprint(auth_bp)
     #   app.register_blueprint(public_bp)
     #   app.register_blueprint(contact_bp)
     #   app.register_blueprint(admin_models_bp)  ... etc.

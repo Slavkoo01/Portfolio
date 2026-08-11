@@ -63,3 +63,55 @@ in the initial migration).
   keep a `download_url` instead.
 - "Enum" columns are VARCHAR + CHECK (see `app/models/enums.py`), chosen over
   native PG enums for painless Alembic migrations.
+
+---
+
+# Phase 4 — Authentication & Authorization
+
+Session-cookie auth (not JWT), Argon2 password hashing, CSRF protection, and
+role-based route guards.
+
+## New pieces
+
+- `app/services/security.py`     — Argon2id hash/verify
+- `app/services/auth_service.py` — credential verification, last-login, rehash
+- `app/services/user_service.py` — admin/user creation
+- `app/auth/session.py`          — session login/logout, load current user
+- `app/auth/csrf.py`             — double-submit CSRF token
+- `app/auth/decorators.py`       — @login_required, @admin_required
+- `app/repositories/`            — base + user repositories (only layer using db.session)
+- `app/schemas/auth.py`          — login validation + safe user output
+- `app/routes/auth.py`           — /api/auth/login|logout|me|csrf
+- `app/cli.py`                   — `flask create-admin`
+
+## Create your admin user
+
+    $env:FLASK_APP = "run.py"
+    flask create-admin
+    # prompts for username, email, and password (hidden, entered twice)
+
+## Auth endpoints
+
+- `POST /api/auth/login`   body: {"identifier": "<username-or-email>", "password": "..."}
+                           -> sets session + csrf_token cookies, returns user
+- `POST /api/auth/logout`  (requires login + X-CSRF-Token header)
+- `GET  /api/auth/me`      -> {"user": {...}} or {"user": null}
+- `GET  /api/auth/csrf`    -> sets csrf_token cookie (frontend calls on load)
+
+## How the frontend (React, later) will use this
+
+1. On app load, call `GET /api/auth/csrf` (sets the readable csrf_token cookie)
+   and `GET /api/auth/me` (to know if already logged in).
+2. To log in: `POST /api/auth/login`. The browser stores the session cookie.
+3. For every POST/PUT/PATCH/DELETE: read the `csrf_token` cookie value and send
+   it as the `X-CSRF-Token` header. GET requests need no CSRF.
+4. Use `credentials: 'include'` on fetch so cookies are sent cross-origin
+   (localhost:5173 -> localhost:5000).
+
+## Testing (validated in this drop)
+
+- login with wrong password -> 401 INVALID_CREDENTIALS (no username enumeration)
+- login correct -> 200, session + csrf cookies, no password_hash in response
+- /me reflects login state
+- state-changing request without CSRF header -> 403 CSRF_MISSING
+- non-admin hitting an @admin_required route -> 403 FORBIDDEN
