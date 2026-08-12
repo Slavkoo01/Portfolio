@@ -80,3 +80,30 @@ def list_projects():
 def get_project(slug: str):
     project = ProjectService().get_public_by_slug(slug)
     return jsonify({"project": _project_out.dump(project)})
+
+
+# ---------- github (public, cache-only) ----------
+from app.schemas.github import (  # noqa: E402
+    GithubRepoOutSchema, GithubFileContentSchema,
+)
+from app.services.github.read import GitHubReadService  # noqa: E402
+
+_gh_repo_out = GithubRepoOutSchema()
+_gh_file_out = GithubFileContentSchema()
+
+
+@public_bp.get("/projects/<slug>/repository")
+def project_repository(slug: str):
+    repo = GitHubReadService().get_repo(slug)
+    return jsonify({"repository": _gh_repo_out.dump(repo)})
+
+
+@public_bp.get("/projects/<slug>/repository/tree")
+def project_tree(slug: str):
+    return jsonify(GitHubReadService().get_tree(slug))
+
+
+@public_bp.get("/projects/<slug>/repository/file/<path:file_path>")
+def project_file(slug: str, file_path: str):
+    f = GitHubReadService().get_file(slug, file_path)
+    return jsonify({"file": _gh_file_out.dump(f)})

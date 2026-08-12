@@ -24,6 +24,7 @@ def register_blueprints(app: Flask) -> None:
     from app.routes.admin.models import admin_models_bp
     from app.routes.admin.projects import admin_projects_bp
     from app.routes.admin.assets import admin_assets_bp
+    from app.routes.admin.github import admin_github_bp
 
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
@@ -32,6 +33,7 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(admin_models_bp)
     app.register_blueprint(admin_projects_bp)
     app.register_blueprint(admin_assets_bp)
+    app.register_blueprint(admin_github_bp)
     # Later phases will add:
     #   app.register_blueprint(contact_bp)
     #   app.register_blueprint(admin_github_bp)  ... etc.
