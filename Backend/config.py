@@ -61,6 +61,14 @@ class BaseConfig:
     GITHUB_API_BASE = "https://api.github.com"
     GITHUB_MAX_CONTENT_KB = int(os.getenv("GITHUB_MAX_CONTENT_KB", "512"))
 
+    # --- Contact form rate limiting ---
+    CONTACT_RATE_LIMIT = int(os.getenv("CONTACT_RATE_LIMIT", "5"))
+    CONTACT_RATE_WINDOW = int(os.getenv("CONTACT_RATE_WINDOW", "3600"))
+
+    # --- Analytics view tracking rate limiting ---
+    VIEW_RATE_LIMIT = int(os.getenv("VIEW_RATE_LIMIT", "120"))
+    VIEW_RATE_WINDOW = int(os.getenv("VIEW_RATE_WINDOW", "60"))
+
     # --- Future object storage (unused while STORAGE_BACKEND=local) ---
     R2_ENDPOINT = os.getenv("R2_ENDPOINT", "")
     R2_ACCESS_KEY = os.getenv("R2_ACCESS_KEY", "")

@@ -245,3 +245,161 @@ POST /api/admin/models/<id>/assets with form-data fields:
 2. Uncomment the r2 branch in `storage/factory.py`.
 3. Set STORAGE_BACKEND=r2 and R2_* env vars.
 Business logic and routes stay identical because they only use the interface.
+
+---
+
+# Phase 7 — GitHub Integration & Caching
+
+Displays your repositories (metadata, README, file tree, source) from a Postgres
+cache. Public visits NEVER call GitHub — only admin-triggered sync does.
+
+## Architecture
+
+    Visitor -> Flask -> Postgres cache            (never GitHub)
+    Admin sync -> Flask -> GitHub API -> Postgres cache
+
+## New pieces
+
+- `app/services/github/client.py`  — GitHub API wrapper (token, ETag, rate limit)
+- `app/services/github/service.py` — sync logic (metadata, tree, files, README)
+- `app/services/github/read.py`    — public cache reads + nested tree builder
+- `app/services/github/link.py`    — link a project to a cache row (no GitHub call)
+- `app/repositories/github_repository.py`
+- `app/schemas/github.py`
+- `app/routes/admin/github.py`     — admin sync endpoints
+- public github endpoints added to `app/routes/public.py`
+
+## Public endpoints (cache-only, no auth)
+
+    GET /api/projects/<slug>/repository
+    GET /api/projects/<slug>/repository/tree
+    GET /api/projects/<slug>/repository/file/<path>
+
+## Admin endpoints (ADMIN + CSRF — the ONLY GitHub-calling endpoints)
+
+    POST /api/admin/projects/<project_id>/github/link
+    POST /api/admin/github/sync
+    POST /api/admin/github/repositories/<repo_id>/sync
+    GET  /api/admin/github/repositories
+
+## Workflow
+
+1. Create a project with github_owner + github_repo set.
+2. POST .../github/link  -> creates the cache row.
+3. POST .../sync         -> pulls metadata, tree, README, small text files.
+4. Public endpoints now serve everything from Postgres.
+
+## Caching behaviour
+
+- ETag stored on github_repositories; next sync sends If-None-Match.
+- 304 Not Modified -> status NOT_MODIFIED, no further work (saves rate limit).
+- Rate limit (403 + remaining 0) -> status RATE_LIMITED, recorded, no crash.
+- Text files (code, md, svg, ...) under GITHUB_MAX_CONTENT_KB stored inline.
+- Binary files (png, etc.) store NULL content + a raw.githubusercontent download_url.
+- github_syncs is an append-only audit log (status/timing/errors/requests_made).
+
+## Needs a GitHub token
+
+Set GITHUB_TOKEN in .env (a fine-grained or classic PAT with public repo read).
+Without a token, sync still works for public repos but with a much lower rate limit.
+
+## Future: background worker
+
+sync_repository(repo) is HTTP-agnostic. To move to Celery/RQ later, the admin
+route enqueues instead of calling directly — the sync logic stays identical.
+
+---
+
+# Phase 8 — Contact Messages
+
+Public contact form (no account needed) + admin management, with anti-spam
+rate limiting.
+
+## New pieces
+
+- `app/repositories/contact_repository.py`
+- `app/services/contact_service.py`   — submit + admin list/read/status/delete
+- `app/services/rate_limit.py`        — in-memory per-IP rate limiter
+- `app/utils/hashing.py`              — pseudonymous IP hashing (no raw IPs)
+- `app/schemas/contact.py`            — validation (incl. email) + output
+- `app/routes/contact.py`             — public POST /api/contact
+- `app/routes/admin/messages.py`      — admin endpoints
+
+## Endpoints
+
+Public (no auth, rate-limited):
+    POST /api/contact   { name, email, subject?, message }
+
+Admin (ADMIN + CSRF):
+    GET    /api/admin/messages?status=UNREAD&page=1
+    GET    /api/admin/messages/<id>        (auto marks UNREAD -> READ)
+    PATCH  /api/admin/messages/<id>        { status }
+    DELETE /api/admin/messages/<id>        (hard delete)
+
+## Behaviour
+
+- guests submit without an account; CSRF not required on the public form
+- email validated server-side; name/message required
+- rate limited (default 5/hour per IP hash) -> 429 when exceeded
+- opening a message auto-transitions UNREAD -> READ (sets read_at)
+- status transitions set read_at / replied_at timestamps
+- ARCHIVED is the soft-delete status; DELETE hard-deletes
+- guests cannot access /api/admin/messages -> 401
+
+## Config (.env)
+
+    CONTACT_RATE_LIMIT=5      # messages allowed per window
+    CONTACT_RATE_WINDOW=3600  # window in seconds
+
+## Note on the rate limiter
+
+In-memory, per-process — resets on restart and isn't shared across multiple
+workers. Fine for a single-process personal portfolio. If you deploy with
+multiple workers, swap in a Redis-backed limiter (Flask-Limiter); the call
+site stays the same.
+
+---
+
+# Phase 9 — Dashboard & Analytics
+
+Single admin dashboard endpoint aggregating counts, views, recent items, and
+GitHub status; plus lightweight pseudonymous page-view tracking.
+
+## New pieces
+
+- `app/repositories/analytics_repository.py`
+- `app/services/analytics_service.py`   — record views, simple counts
+- `app/services/dashboard_service.py`   — aggregates everything for the dashboard
+- `app/routes/admin/dashboard.py`       — GET /api/admin/dashboard
+- `app/routes/analytics.py`             — POST /api/analytics/view
+
+## Endpoints
+
+Public (no auth, rate-limited, best-effort):
+    POST /api/analytics/view   { path }
+
+Admin (ADMIN + CSRF):
+    GET /api/admin/dashboard
+
+## Dashboard response shape
+
+    {
+      "counts":  { models, models_published, projects, projects_published,
+                   messages, messages_unread },
+      "views":   { total, last_7_days, last_30_days, unique_30_days },
+      "recent":  { models[], projects[], messages[] },   // 5 each
+      "github":  { repositories, last_sync }
+    }
+
+## Analytics design (intentionally minimal)
+
+- stores only a pseudonymous visitor hash (IP+secret hashed), never raw IP
+- recording is best-effort: a tracking failure returns ok:false, never errors
+- rate-limited (default 120/min per IP hash)
+- no rollup tables — simple time-window counts are enough for a portfolio
+- the frontend calls POST /api/analytics/view on navigation
+
+## Config (.env)
+
+    VIEW_RATE_LIMIT=120   # view pings allowed per window per IP
+    VIEW_RATE_WINDOW=60   # window in seconds
