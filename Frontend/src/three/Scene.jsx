@@ -1,61 +1,85 @@
 import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Vignette, DepthOfField, ChromaticAberration } from '@react-three/postprocessing'
+import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import Island from './Island.jsx'
+import Embers from './Embers.jsx'
+import Fireflies from './Fireflies.jsx'
+import FogPlanes from './FogPlanes.jsx'
+
 
 /**
- * The 3D stage for the hero art.
- * Recreates the Blender atmosphere in Three.js terms:
- *  - dark violet fog for depth
- *  - a key + rim light so the island reads in 3D
- *  - bloom so the emissive rings/lamps glow like the render
+ * 3D stage for the hero.
+ * Lighting strategy to approximate the Blender render's mood:
+ *  - low ambient + a soft "night" environment for gentle fill (so nothing is
+ *    pure black but it stays moody)
+ *  - cool key light from upper-left, warm rim from the lantern side
+ *  - bloom tuned so lanterns/neon glow without blowing out
  */
 export default function Scene() {
   return (
     <Canvas
-      camera={{ position: [8.4, 4.5, 20], fov: 42, near: 0.1, far: 200 }}
-      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.1 }}
+      shadows
+      camera={{ position: [7, 4, 18], fov: 42, near: 0.1, far: 200 }}
+      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
       dpr={[1, 2]}
       style={{ background: 'transparent' }}
     >
-      {/* Atmospheric fog matching the night-violet palette */}
-      <fog attach="fog" args={['#0a0710', 18, 55]} />
 
-      {/* Ambient base so nothing is pure black */}
-      <ambientLight intensity={0.7} color="#3a2a5c" />
+      <fog attach="fog" args={['#0c0813', 22, 60]} />
+      {/* Soft ambient base */}
+      <ambientLight intensity={5} color="#4a3a6b" />
+      {/* Hemisphere: cool sky, warm ground bounce — soft realistic fill */}
+      <hemisphereLight args={['#6a7bff', '#3a2a1a', 0.9]} />
 
-      {/* Key light (cool, from upper left, like the render) */}
-      <directionalLight
-        position={[-8, 12, 8]}
-        intensity={1.4}
-        color="#9db4ff"
-      />
-      {/* Warm fill from the lamp side */}
-      <pointLight position={[6, 2, 4]} intensity={5} color="#ffb968" distance={20} decay={2} />
-      {/* Rim light from behind for separation */}
-      <spotLight
-        position={[0, 8, -12]}
-        angle={0.6}
-        penumbra={1}
-        intensity={8}
-        color="#c65cff"
-        distance={40}
-      />
+      {/* Cool key light, upper-left (like the render) */}
+      <directionalLight position={[-6, 10, 6]} intensity={2} color="#aebfff" castShadow
+        shadow-mapSize={[1024, 1024]} />
+
+      {/* Violet rim from behind for separation + neon feel */}
+      <spotLight position={[0, 7, -12]} angle={0.7} penumbra={1} intensity={20}
+        color="#c65cff" distance={45} />
 
       <Suspense fallback={null}>
         <Island dragEnabled />
+        {/* Encircling + base mist (loads the cloud texture, so inside Suspense) */}
+        <FogPlanes count={100} radius={0} baseY={-3} opacity={0.004} minScale={3} maxScale={9} drift={0.85} yJitter={5}/>
       </Suspense>
 
-      {/* Post-processing: bloom makes emissive parts glow */}
-      <EffectComposer>
+      {/* Fire embers drifting up across the whole scene */}
+      <Embers count={200} />
+
+      {/* Slow wandering fireflies, clustered around the forest & knight */}
+      <Fireflies count={70} />
+
+      {/* ─── Compositing stack ───────────────────────────────────────────────
+          Bloom     = neon/lamp glow
+          DepthOfField = bokeh blur; only things OFF the focus distance blur.
+                      focusDistance ~ where the island sits (sharp); the far
+                      background + near fog fall out of focus and go soft.
+          ChromaticAberration = subtle lens colour-fringe at the edges
+          Vignette  = darkened corners for focus
+      */}
+      <EffectComposer multisampling={4}>
         <Bloom
-          intensity={1.4}
-          luminanceThreshold={0.8}
+          intensity={.9}
+          luminanceThreshold={0.6}
           luminanceSmoothing={0.9}
           mipmapBlur
+          
         />
-        <Vignette eskil={false} offset={0.25} darkness={0.75} />
+        <DepthOfField
+          focusDistance={0.01}   // 0..1 in "normalized" depth; where it's sharp
+          focalLength={0.02}     // how quickly things blur away from focus
+          bokehScale={.1}         // blur/bokeh strength
+          height={800}
+        />
+        <ChromaticAberration
+          blendFunction={BlendFunction.NORMAL}
+          offset={[0.0005, 0.001]}
+        />
+        <Vignette eskil={false} offset={0.2} darkness={0.7} />
       </EffectComposer>
     </Canvas>
   )

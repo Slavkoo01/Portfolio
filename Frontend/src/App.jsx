@@ -1,7 +1,6 @@
 import Navbar from './components/Navbar.jsx'
 import Hero from './sections/Hero.jsx'
 import FeaturedWork from './components/FeaturedWork.jsx'
-
 export default function App() {
   return (
     <>
