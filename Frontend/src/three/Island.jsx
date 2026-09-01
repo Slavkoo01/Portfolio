@@ -18,15 +18,13 @@ import FlickerLight from './FlickerLight.jsx'
  * ─────────────────────────────────────────────────────────────────────────
  */
 const EMISSIVE = {
-  // purple lamp glass shells ship WITHOUT emissive — give them a violet glow
-  lamp_glass:  { color: '#a24dff', intensity: 2.0 },
   // the lights inside the lamps (already violet in the model)
-  lamp_light:  { color: null,      intensity: 2.2 },
+  lamp_light:  { color: null,      intensity: 15 },
   // neon rings / sphere behind the character
-  Circle:      { color: null,      intensity: 2.6 },
-  Sphere:      { color: null,      intensity: 2.6 },
+  Circle:      { color: null,      intensity: 12.50 },
+  Sphere:      { color: null,      intensity: 40.0 },
   // amber light patch on the island
-  island001:   { color: null,      intensity: 2.0 },
+  island001:   { color: null,      intensity: 2 },
 }
 // fallback cap for any other emissive material not listed above
 const DEFAULT_EMISSIVE_CAP = 2.2
@@ -143,12 +141,12 @@ export default function Island({ dragEnabled = true }) {
         <FlickerLight
           key={a.name}
           position={a.position}
-          intensity={250}
+          intensity={300}
           color={['#ffb968', '#5b7bff', '#c65cff', '#ffb968'][i % 4]}
           distance={18}
-          seed={1.7}
-          amount={0.15}
-          decay={2}
+          seed={[3, 1, 2, 4][i % 4]}
+          amount={0.20}
+          decay={1.8}
         />
       ))}
     </group>

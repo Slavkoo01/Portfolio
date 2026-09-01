@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { EffectComposer, Bloom, Vignette, DepthOfField, ChromaticAberration } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Vignette, ChromaticAberration, HueSaturation, BrightnessContrast } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import Island from './Island.jsx'
@@ -44,7 +44,7 @@ export default function Scene() {
       <Suspense fallback={null}>
         <Island dragEnabled />
         {/* Encircling + base mist (loads the cloud texture, so inside Suspense) */}
-        <FogPlanes count={100} radius={0} baseY={-3} opacity={0.004} minScale={3} maxScale={9} drift={0.85} yJitter={5}/>
+        <FogPlanes count={100} radius={0} baseY={-3} opacity={0.006} minScale={3} maxScale={9} drift={0.85} yJitter={5}/>
       </Suspense>
 
       {/* Fire embers drifting up across the whole scene */}
@@ -54,32 +54,21 @@ export default function Scene() {
       <Fireflies count={70} />
 
       {/* ─── Compositing stack ───────────────────────────────────────────────
-          Bloom     = neon/lamp glow
-          DepthOfField = bokeh blur; only things OFF the focus distance blur.
-                      focusDistance ~ where the island sits (sharp); the far
-                      background + near fog fall out of focus and go soft.
-          ChromaticAberration = subtle lens colour-fringe at the edges
-          Vignette  = darkened corners for focus
+          Island stays FULLY SHARP. Instead of screen-space DoF (which blurred
+          the island too), depth now comes from: fog on the far background, a
+          stronger vignette, and bloom on the glowing parts. The far particles
+          read as soft because of their own additive glow + fog.
       */}
       <EffectComposer multisampling={4}>
         <Bloom
-          intensity={.9}
-          luminanceThreshold={0.6}
+          intensity={1.35}
+          luminanceThreshold={.45}
           luminanceSmoothing={0.9}
           mipmapBlur
-          
         />
-        <DepthOfField
-          focusDistance={0.01}   // 0..1 in "normalized" depth; where it's sharp
-          focalLength={0.02}     // how quickly things blur away from focus
-          bokehScale={.1}         // blur/bokeh strength
-          height={800}
-        />
-        <ChromaticAberration
-          blendFunction={BlendFunction.NORMAL}
-          offset={[0.0005, 0.001]}
-        />
-        <Vignette eskil={false} offset={0.2} darkness={0.7} />
+       <HueSaturation saturation={.05}/>
+       <BrightnessContrast contrast={.05}/>
+        <Vignette eskil={false} offset={0.15} darkness={0.85} />
       </EffectComposer>
     </Canvas>
   )

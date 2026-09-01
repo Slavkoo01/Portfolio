@@ -21,6 +21,7 @@ export default function Embers({
   size = 0.13,          // dot size
 }) {
   const pointsRef = useRef()
+  const matRef = useRef()
 
   // --- Build the initial data ONCE (useMemo = compute once, remember) ---
   const { positions, speeds, drift } = useMemo(() => {
@@ -72,6 +73,17 @@ export default function Embers({
     }
     // tell three.js the positions changed so it re-uploads them to the GPU
     pointsRef.current.geometry.attributes.position.needsUpdate = true
+
+    // --- animate colour: slowly cycle through warm ember hues ---
+    if (matRef.current) {
+      matRef.current.opacity = 0.7 + Math.sin(t * 1.2) * .38
+      // hue drifts across amber→orange→gold (0.03–0.11 in HSL hue)
+      const hue = 0.07 + Math.sin(t * 0.25) * 0.04
+      const light = 0.7 + Math.sin(t * .5) * .1
+      matRef.current.color.setHSL(hue, 1, light)
+      matRef.current.color.multiplyScalar(1.5)
+      
+    }
   })
 
   return (
@@ -87,11 +99,12 @@ export default function Embers({
       </bufferGeometry>
       {/* material controls how each point looks */}
       <pointsMaterial
+        ref={matRef}
         color={color}
         size={size}
         sizeAttenuation           // farther embers look smaller (perspective)
         transparent
-        opacity={0.9}
+        opacity={1}
         depthWrite={false}        // don't block things behind them
         blending={THREE.AdditiveBlending}  // glow: overlapping embers add up
         toneMapped={false}        // keep them bright so bloom catches them

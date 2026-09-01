@@ -71,7 +71,12 @@ export default function Fireflies({
 
     // global gentle pulse of the whole swarm's brightness
     if (matRef.current) {
-      matRef.current.opacity = 0.55 + Math.sin(t * 1.2) * 0.25
+      matRef.current.opacity = 0.7 + Math.sin(t * 1.2) * .28
+      // slowly cycle through green→cyan→yellow-green hues
+      const hue = 0.3 + Math.sin(t * 0.18) * 0.05
+      const light = 0.55 + Math.sin(t * 0.5) * 0.1   // ~0.22–0.38 in HSL
+      matRef.current.color.setHSL(hue, 0.85, light)
+      matRef.current.color.multiplyScalar(2.5)
     }
   })
 
