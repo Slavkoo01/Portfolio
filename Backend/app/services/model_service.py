@@ -59,6 +59,15 @@ class ModelService:
             is_published=data.get("is_published", False),
             polygon_count=data.get("polygon_count"),
             vertex_count=data.get("vertex_count"),
+            position_x=data.get("position_x", 0.0),
+            position_y=data.get("position_y", 0.0),
+            position_z=data.get("position_z", 0.0),
+            rotation_x=data.get("rotation_x", 0.0),
+            rotation_y=data.get("rotation_y", 0.0),
+            rotation_z=data.get("rotation_z", 0.0),
+            scale_x=data.get("scale_x", 1.0),
+            scale_y=data.get("scale_y", 1.0),
+            scale_z=data.get("scale_z", 1.0),
         )
         self.models.add(model)
         self.models.commit()
@@ -76,8 +85,14 @@ class ModelService:
                 raise ValidationError("Slug already in use.", code="SLUG_TAKEN")
             model.slug = data["slug"]
 
+        transform_fields = (
+            "position_x", "position_y", "position_z",
+            "rotation_x", "rotation_y", "rotation_z",
+            "scale_x", "scale_y", "scale_z",
+        )
         for field in ("title", "description", "category_id", "is_featured",
-                      "is_published", "polygon_count", "vertex_count"):
+                      "is_published", "polygon_count", "vertex_count",
+                      *transform_fields):
             if field in data:
                 setattr(model, field, data[field])
 

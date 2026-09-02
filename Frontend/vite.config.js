@@ -6,13 +6,10 @@ export default defineConfig({
   assetsInclude: ['**/*.glb'],
   server: {
     proxy: {
-      // Forward all /api requests to the Flask backend in development.
-      // This makes the browser treat them as same-origin, so session cookies
-      // and CSRF work without CORS headaches.
-      '/api': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
+      // Flask API
+      '/api': { target: 'http://127.0.0.1:5000', changeOrigin: true },
+      // Uploaded files (thumbnails, GLB models) served by Flask at /files/<key>
+      '/files': { target: 'http://127.0.0.1:5000', changeOrigin: true },
     },
   },
 })

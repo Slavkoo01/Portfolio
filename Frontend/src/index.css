@@ -5,7 +5,72 @@
 @layer base {
   html { scroll-behavior: smooth; }
   body { @apply bg-night-950 text-white/90 font-body antialiased; overflow-x: hidden; }
+
+  /* --- Fix native <select> dropdowns (dark theme) --- */
+  select {
+    color: white;
+    background-color: #1a1030;
+    /* custom chevron so it doesn't use the default OS arrow box */
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff88' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    padding-right: 2rem !important;
+  }
+  /* the option list itself (browser-dependent, but this helps) */
+  select option {
+    background-color: #1a1030;
+    color: white;
+  }
+
+  /* --- Fix range sliders (dark neon theme) --- */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #c65cff;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(198,92,255,0.6);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: none;
+    border-radius: 50%;
+    background: #c65cff;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(198,92,255,0.6);
+  }
+
+  /* --- Kill the white autofill background on inputs --- */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: white !important;
+    -webkit-box-shadow: 0 0 0px 1000px #1a1030 inset !important;
+    caret-color: white;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+
+  /* number inputs: hide the tiny spinner clutter on dark bg (optional) */
+  input[type="number"]::-webkit-inner-spin-button {
+    opacity: 0.4;
+  }
 }
+
 @layer utilities {
   .text-gradient { @apply bg-gradient-to-r from-neon-violet via-neon-magenta to-neon-ice bg-clip-text text-transparent; }
   .glass { @apply bg-white/[0.03] backdrop-blur-md border border-white/[0.08]; }

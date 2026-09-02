@@ -91,7 +91,10 @@ export default function ModelsList() {
               {models.map((m) => (
                 <tr key={m.id} className="border-b border-white/[0.03] last:border-0">
                   <td className="px-5 py-3">
-                    <span className="text-white/90">{m.title}</span>
+                    <div className="flex items-center gap-3">
+                      <ModelThumb model={m} />
+                      <span className="text-white/90">{m.title}</span>
+                    </div>
                     {m.is_featured && <span className="ml-2 text-xs text-neon-amber">★ featured</span>}
                   </td>
                   <td className="px-5 py-3 text-white/40 font-mono text-xs">{m.slug}</td>
@@ -132,5 +135,16 @@ export default function ModelsList() {
         </div>
       )}
     </AdminLayout>
+  )
+}
+
+/** Small thumbnail for the list row. */
+function ModelThumb({ model }) {
+  const thumb = (model.assets || []).find((a) => a.asset_type === 'THUMBNAIL')
+  const url = thumb ? (thumb.url || (thumb.storage_key ? `/files/${thumb.storage_key}` : null)) : null
+  return (
+    <div className="w-16 h-16 rounded-lg bg-night-950 border border-white/[0.06] overflow-hidden flex items-center justify-center shrink-0">
+      {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <span className="text-white/20 text-xl">⬡</span>}
+    </div>
   )
 }

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
+    Float,
     CheckConstraint,
     ForeignKey,
     Integer,
@@ -76,6 +77,18 @@ class Model(Base, TimestampMixin, SoftDeleteMixin):
 
     polygon_count: Mapped[int | None] = mapped_column(Integer)
     vertex_count: Mapped[int | None] = mapped_column(Integer)
+
+    # --- display transform (how the model is posed in the 3D viewer) ---
+    # position (world units), rotation (degrees), scale (multiplier).
+    position_x: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    position_y: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    position_z: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    rotation_x: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    rotation_y: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    rotation_z: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    scale_x: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    scale_y: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    scale_z: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
 
     # --- relationships ---
     owner: Mapped["User"] = relationship(back_populates="models")
