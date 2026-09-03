@@ -58,7 +58,16 @@ class GitHubService:
     def sync_all(self) -> list[dict]:
         results = []
         for repo in self.repos.list_all():
-            results.append(self.sync_repository(repo))
+            try:
+                results.append(self.sync_repository(repo))
+            except Exception as e:  # noqa: BLE001
+                # one repo failing must not abort the whole batch
+                db.session.rollback()
+                results.append({
+                    "repository_id": repo.id,
+                    "status": "FAILED",
+                    "error": str(e)[:300],
+                })
         return results
 
     def sync_repository(self, repo: GithubRepository) -> dict:
@@ -97,7 +106,21 @@ class GitHubService:
             sync.error_message = f"Unexpected: {e}"[:1000]
         finally:
             sync.finished_at = _now()
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception:  # noqa: BLE001
+                # session was poisoned by a flush error (e.g. duplicate key);
+                # roll back and record the sync row separately so we don't crash.
+                db.session.rollback()
+                try:
+                    sync.status = SyncStatus.FAILED
+                    if not sync.error_message:
+                        sync.error_message = "Sync failed (transaction rolled back)."
+                    sync.finished_at = _now()
+                    db.session.add(sync)
+                    db.session.commit()
+                except Exception:  # noqa: BLE001
+                    db.session.rollback()
 
         return {
             "repository_id": repo.id,
@@ -119,7 +142,19 @@ class GitHubService:
             return
 
         d = resp.data or {}
-        repo.github_id = d.get("id")
+        gid = d.get("id")
+        # Guard: another cache row may already own this github_id (same repo
+        # linked to two projects). Unique constraint would explode on commit,
+        # so only set it if it's free or already ours.
+        if gid is not None:
+            from app.models.github import GithubRepository as _GR
+            clash = db.session.query(_GR).filter(
+                _GR.github_id == gid, _GR.id != repo.id
+            ).first()
+            if clash is None:
+                repo.github_id = gid
+            # if there IS a clash, leave repo.github_id as-is (skip) to avoid
+            # violating the unique constraint; the repo is effectively a dup.
         repo.full_name = d.get("full_name")
         repo.description = d.get("description")
         repo.html_url = d.get("html_url")

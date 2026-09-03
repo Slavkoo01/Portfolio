@@ -75,3 +75,31 @@
   .text-gradient { @apply bg-gradient-to-r from-neon-violet via-neon-magenta to-neon-ice bg-clip-text text-transparent; }
   .glass { @apply bg-white/[0.03] backdrop-blur-md border border-white/[0.08]; }
 }
+
+@layer base {
+  /* --- Dark scrollbars (kill the white/default browser scrollbar) --- */
+  * {
+    scrollbar-width: thin;                      /* Firefox */
+    scrollbar-color: rgba(198,92,255,0.4) transparent;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(198,92,255,0.35);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover { background: rgba(198,92,255,0.6); background-clip: content-box; }
+  *::-webkit-scrollbar-corner { background: transparent; }
+
+  /* --- Text selection: neon instead of default white/blue --- */
+  ::selection { background: rgba(198,92,255,0.35); color: #fff; }
+  ::-moz-selection { background: rgba(198,92,255,0.35); color: #fff; }
+}
+
+@layer base {
+  /* highlight.js: transparent background so it sits on our glass panels */
+  .hljs, .hljs-code.hljs { background: transparent !important; padding: 0 !important; }
+  code.hljs-code { background: transparent !important; }
+}

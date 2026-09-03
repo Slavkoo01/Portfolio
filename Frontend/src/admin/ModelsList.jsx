@@ -143,8 +143,8 @@ function ModelThumb({ model }) {
   const thumb = (model.assets || []).find((a) => a.asset_type === 'THUMBNAIL')
   const url = thumb ? (thumb.url || (thumb.storage_key ? `/files/${thumb.storage_key}` : null)) : null
   return (
-    <div className="w-16 h-16 rounded-lg bg-night-950 border border-white/[0.06] overflow-hidden flex items-center justify-center shrink-0">
-      {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <span className="text-white/20 text-xl">⬡</span>}
+    <div className="w-32 h-32 rounded-xl bg-night-950 border border-white/[0.06] overflow-hidden flex items-center justify-center shrink-0">
+      {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <span className="text-white/20 text-3xl">⬡</span>}
     </div>
   )
 }

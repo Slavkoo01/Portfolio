@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api.js'
 import AdminLayout from './AdminLayout.jsx'
+import RepositoryView from '../components/RepositoryView.jsx'
 
 /**
  * Projects management. Lists projects, lets you create/edit/delete, toggle
@@ -14,6 +15,7 @@ export default function ProjectsList() {
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState(null)
   const [editing, setEditing] = useState(null) // project object or 'new' or null
+  const [viewing, setViewing] = useState(null) // project whose code we're viewing
 
   const load = useCallback(() => {
     setLoading(true)
@@ -103,6 +105,12 @@ export default function ProjectsList() {
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-2">
                       {p.github_owner && (
+                        <button onClick={() => setViewing(p)}
+                          className="rounded-lg px-3 py-1.5 text-xs bg-neon-violet/10 text-neon-violet hover:bg-neon-violet/20 transition">
+                          Code
+                        </button>
+                      )}
+                      {p.github_owner && (
                         <button onClick={() => sync(p)} disabled={busyId === p.id}
                           className="rounded-lg px-3 py-1.5 text-xs bg-neon-ice/10 text-neon-ice hover:bg-neon-ice/20 transition">
                           Sync
@@ -128,6 +136,18 @@ export default function ProjectsList() {
           onSaved={() => { setEditing(null); load() }}
         />
       )}
+
+      {viewing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setViewing(null)}>
+          <div className="w-full max-w-5xl max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-xl font-bold">{viewing.title} — code</h2>
+              <button onClick={() => setViewing(null)} className="rounded-lg px-4 py-2 text-sm bg-white/[0.06] hover:bg-white/10 transition">Close</button>
+            </div>
+            <RepositoryView project={viewing} />
+          </div>
+        </div>
+      )}
     </AdminLayout>
   )
 }
@@ -136,7 +156,7 @@ function ProjectEditor({ project, onClose, onSaved }) {
   const isEdit = !!project
   const [form, setForm] = useState({
     title: project?.title || '', description: project?.description || '',
-    github_owner: project?.github_owner || '', github_repo: project?.github_repo || '',
+    github_owner: project?.github_owner || 'Slavkoo01', github_repo: project?.github_repo || '',
     is_published: project?.is_published || false, is_featured: project?.is_featured || false,
   })
   const [error, setError] = useState('')

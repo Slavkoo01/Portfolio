@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
-import { useGLTF, OrbitControls, Stage } from '@react-three/drei'
+import { useGLTF, OrbitControls, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
 import { api } from '../lib/api.js'
 import AdminLayout from './AdminLayout.jsx'
@@ -84,6 +84,10 @@ export default function ModelForm() {
   const glb = assets.find((a) => a.asset_type === 'MODEL' || /\.glb$/i.test(a.file_name || ''))
   const glbUrl = glb ? assetUrl(glb) : null
 
+  // animation clips discovered inside the GLB, and which one is playing
+  const [clipNames, setClipNames] = useState([])
+  const [activeClip, setActiveClip] = useState(null)
+
   return (
     <AdminLayout>
       <div className="mb-6">
@@ -132,19 +136,70 @@ export default function ModelForm() {
               {isEdit ? (
                 <>
                   <div className="glass rounded-2xl p-6">
-                    <h3 className="font-display font-semibold mb-1">3D Preview</h3>
-                    <p className="text-white/40 text-xs mb-4">This is how your model is posed. Drag to orbit.</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-display font-semibold">3D Preview</h3>
+                      {activeClip && (
+                        <button onClick={() => setActiveClip(null)}
+                          className="rounded-lg px-3 py-1 text-xs bg-white/[0.06] hover:bg-white/10 transition">
+                          ■ stop
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-white/40 text-xs mb-4">
+                      {activeClip ? `Playing "${activeClip}". Drag to orbit.` : 'Drag to orbit. Textures & animations are read from the GLB.'}
+                    </p>
                     {glbUrl ? (
-                      <ModelViewer url={glbUrl} form={form} />
+                      <ModelViewer
+                        url={glbUrl}
+                        form={form}
+                        activeClip={activeClip}
+                        onClips={setClipNames}
+                      />
                     ) : (
                       <div className="aspect-video rounded-xl bg-night-950 flex items-center justify-center text-white/30 text-sm">
                         Upload a GLB model below to preview it.
                       </div>
                     )}
+
+                    {/* Animation clips discovered inside the GLB */}
+                    {glbUrl && clipNames.length > 0 && (
+                      <div className="mt-4">
+                        <div className="text-xs text-white/40 mb-2">Animations ({clipNames.length})</div>
+                        <div className="flex flex-wrap gap-2">
+                          {clipNames.map((name) => (
+                            <button key={name}
+                              onClick={() => setActiveClip((c) => c === name ? null : name)}
+                              className={`rounded-lg px-3 py-1.5 text-xs transition ${
+                                activeClip === name
+                                  ? 'bg-neon-violet/20 text-neon-violet border border-neon-violet/40'
+                                  : 'bg-white/[0.06] text-white/60 hover:bg-white/10'
+                              }`}>
+                              {activeClip === name ? '▶ ' : ''}{name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {glbUrl && clipNames.length === 0 && (
+                      <p className="mt-4 text-xs text-white/30">No animations found in this GLB.</p>
+                    )}
                   </div>
 
                   <ThumbnailManager modelId={id} assets={assets} onChange={load} />
-                  <FileManager modelId={id} assets={assets} onChange={load} />
+
+                  {/* Model file (single GLB — carries geometry, textures, animations) */}
+                  <UploadSection
+                    title="Model" hint="One GLB with everything: mesh, textures, and animations."
+                    modelId={id} assetType="MODEL" single accept=".glb,.gltf"
+                    items={glb ? [glb] : []} onChange={load}
+                  />
+
+                  {/* Textures gallery — shown to visitors as 'textures I made' */}
+                  <UploadSection
+                    title="Textures" hint="Gallery of textures to showcase (display only)."
+                    modelId={id} assetType="TEXTURE" accept="image/*"
+                    items={assets.filter((a) => a.asset_type === 'TEXTURE')} onChange={load} gallery
+                  />
                 </>
               ) : (
                 <div className="glass rounded-2xl p-10 text-center text-white/40">
@@ -204,7 +259,7 @@ function TransformControls({ form, up, onSave, saving }) {
 }
 
 /* ---------- 3D viewer ---------- */
-function ModelViewer({ url, form }) {
+function ModelViewer({ url, form, activeClip, onClips }) {
   return (
     <div className="aspect-video rounded-xl bg-night-950 overflow-hidden">
       <Canvas camera={{ position: [0, 0, 5], fov: 45 }} dpr={[1, 2]}>
@@ -212,7 +267,7 @@ function ModelViewer({ url, form }) {
         <directionalLight position={[5, 8, 5]} intensity={1.3} />
         <directionalLight position={[-5, 2, -5]} intensity={0.5} color="#8ab4ff" />
         <Suspense fallback={null}>
-          <PosedModel url={url} form={form} />
+          <PosedModel url={url} form={form} activeClip={activeClip} onClips={onClips} />
         </Suspense>
         <OrbitControls enablePan={false} />
         <gridHelper args={[10, 10, '#333', '#1a1a2e']} position={[0, -1.5, 0]} />
@@ -221,21 +276,41 @@ function ModelViewer({ url, form }) {
   )
 }
 
-function PosedModel({ url, form }) {
-  const { scene } = useGLTF(url)
-  const ref = useRef()
+function PosedModel({ url, form, activeClip, onClips }) {
+  const group = useRef()
+  const { scene, animations } = useGLTF(url)
   const cloned = useRef()
-  if (!cloned.current) cloned.current = scene.clone(true)
+  if (!cloned.current || cloned.current.__url !== url) {
+    cloned.current = scene.clone(true)
+    cloned.current.__url = url
+  }
+  const { actions, names } = useAnimations(animations, group)
 
+  // report the discovered clip names up to the parent (for the buttons)
+  const clipsKey = names.join('|')
   useEffect(() => {
-    if (!ref.current) return
-    const g = ref.current
-    g.position.set(+form.position_x, +form.position_y, +form.position_z)
-    g.rotation.set(deg(+form.rotation_x), deg(+form.rotation_y), deg(+form.rotation_z))
-    g.scale.set(+form.scale_x, +form.scale_y, +form.scale_z)
-  }, [form])
+    onClips?.(names)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clipsKey])
 
-  return <primitive ref={ref} object={cloned.current} />
+  // apply the saved transform
+  useEffect(() => {
+    if (!group.current) return
+    group.current.position.set(+form.position_x, +form.position_y, +form.position_z)
+    group.current.rotation.set(deg(+form.rotation_x), deg(+form.rotation_y), deg(+form.rotation_z))
+    group.current.scale.set(+form.scale_x, +form.scale_y, +form.scale_z)
+  }, [form, url])
+
+  // play the selected clip (activeClip = clip name, or null = none)
+  useEffect(() => {
+    if (activeClip && actions[activeClip]) {
+      const a = actions[activeClip]
+      a.reset().fadeIn(0.3).play()
+      return () => { a.fadeOut(0.3) }
+    }
+  }, [activeClip, actions])
+
+  return <group ref={group}><primitive object={cloned.current} /></group>
 }
 
 /* ---------- Thumbnail (single, replaces) ---------- */
@@ -281,19 +356,23 @@ function ThumbnailManager({ modelId, assets, onChange }) {
 }
 
 /* ---------- Other files (GLB / textures / animations) ---------- */
-function FileManager({ modelId, assets, onChange }) {
+/* ---------- Reusable upload section (Model / Textures / Animations) ---------- */
+/**
+ * One section that lists its assets as preview cards and uploads new ones.
+ * Props:
+ *  - single: enforce one file (replaces existing on upload)
+ *  - gallery: render image previews (for textures)
+ *  - selectable + onSelect + activeId: clicking a card selects it (animations)
+ */
+function UploadSection({ title, hint, modelId, assetType, accept, items = [], onChange, single, gallery, selectable, activeId, onSelect }) {
   const [uploading, setUploading] = useState(false)
-  const [assetType, setAssetType] = useState('MODEL')
   const [error, setError] = useState('')
-  const nonThumb = assets.filter((a) => a.asset_type !== 'THUMBNAIL')
 
   async function upload(file) {
     setError(''); setUploading(true)
     try {
-      // enforce single GLB model too
-      if (assetType === 'MODEL') {
-        const existing = assets.find((a) => a.asset_type === 'MODEL')
-        if (existing) await api.del(`/api/admin/models/${modelId}/assets/${existing.id}`).catch(() => {})
+      if (single && items[0]) {
+        await api.del(`/api/admin/models/${modelId}/assets/${items[0].id}`).catch(() => {})
       }
       const fd = new FormData()
       fd.append('asset_type', assetType)
@@ -301,11 +380,13 @@ function FileManager({ modelId, assets, onChange }) {
       await api.post(`/api/admin/models/${modelId}/assets`, fd, { isForm: true })
       onChange()
     } catch (e) {
-      setError(e.code === 'CONTENT_MISMATCH' ? 'File content does not match extension.' : (e.message || 'Upload failed'))
+      setError(e.code === 'CONTENT_MISMATCH' ? 'File content does not match its extension.'
+        : (e.message || 'Upload failed'))
     } finally { setUploading(false) }
   }
 
-  async function remove(a) {
+  async function remove(a, e) {
+    e?.stopPropagation()
     if (!confirm(`Delete ${a.file_name}?`)) return
     await api.del(`/api/admin/models/${modelId}/assets/${a.id}`).catch(() => {})
     onChange()
@@ -313,41 +394,100 @@ function FileManager({ modelId, assets, onChange }) {
 
   return (
     <div className="glass rounded-2xl p-6">
-      <h3 className="font-display font-semibold mb-1">Model files</h3>
-      <p className="text-white/40 text-xs mb-4">GLB model, textures, and animations.</p>
-      {error && <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-300 mb-3">{error}</div>}
-
-      {nonThumb.length > 0 && (
-        <ul className="space-y-2 mb-4">
-          {nonThumb.map((a) => (
-            <li key={a.id} className="flex items-center justify-between text-sm rounded-lg bg-white/[0.03] px-3 py-2">
-              <span className="text-white/70">{a.asset_type}</span>
-              <span className="text-white/30 font-mono text-xs truncate mx-3 flex-1">{a.file_name}</span>
-              <button onClick={() => remove(a)} className="text-red-300/70 hover:text-red-300 text-xs">remove</button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="flex items-center gap-3">
-        <select value={assetType} onChange={(e) => setAssetType(e.target.value)}
-          className="rounded-lg bg-white/[0.04] border border-white/10 px-3 py-2 text-sm outline-none">
-          <option value="MODEL">Model (GLB)</option>
-          <option value="TEXTURE">Texture</option>
-          <option value="ANIMATION">Animation</option>
-          <option value="OTHER">Other</option>
-        </select>
-        <label className={`rounded-lg px-4 py-2 text-sm cursor-pointer transition ${uploading ? 'bg-white/[0.04] text-white/30' : 'bg-white/[0.06] hover:bg-white/10'}`}>
-          {uploading ? 'Uploading…' : 'Choose file'}
-          <input type="file" className="hidden" disabled={uploading}
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-display font-semibold">{title}</h3>
+        <label className={`rounded-lg px-4 py-1.5 text-xs cursor-pointer transition ${uploading ? 'bg-white/[0.04] text-white/30' : 'bg-white/[0.06] hover:bg-white/10'}`}>
+          {uploading ? 'Uploading…' : single && items[0] ? 'Replace' : '+ Upload'}
+          <input type="file" accept={accept} className="hidden" disabled={uploading}
             onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = '' }} />
         </label>
       </div>
+      {hint && <p className="text-white/40 text-xs mb-4">{hint}</p>}
+      {error && <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-300 mb-3">{error}</div>}
+
+      {items.length === 0 ? (
+        <p className="text-sm text-white/30">Nothing uploaded yet.</p>
+      ) : (
+        <ul className={gallery ? 'grid grid-cols-2 sm:grid-cols-3 gap-3' : 'grid grid-cols-1 sm:grid-cols-2 gap-3'}>
+          {items.map((a) => {
+            const active = selectable && activeId === a.id
+            return (
+              <li key={a.id}
+                onClick={selectable ? () => onSelect(a) : undefined}
+                className={`rounded-xl border overflow-hidden transition ${
+                  active ? 'border-neon-violet/60 ring-1 ring-neon-violet/40'
+                  : 'border-white/[0.06]'} ${selectable ? 'cursor-pointer hover:border-white/20' : ''} bg-white/[0.03]`}>
+                <SectionPreview asset={a} gallery={gallery} />
+                <div className="flex items-center justify-between px-3 py-2">
+                  <div className="min-w-0">
+                    {selectable && <div className="text-[10px] text-neon-violet">{active ? '▶ playing' : 'click to play'}</div>}
+                    <div className="text-[10px] text-white/30 font-mono truncate">{a.file_name}</div>
+                  </div>
+                  <button onClick={(e) => remove(a, e)} className="text-red-300/70 hover:text-red-300 text-xs shrink-0 ml-2">✕</button>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
 
-/* ---------- helpers + small components ---------- */
+/** Preview inside a section card: image for textures, static GLB thumb for models/anims. */
+function SectionPreview({ asset, gallery }) {
+  const url = assetUrl(asset)
+  const name = (asset.file_name || '').toLowerCase()
+  const isImage = gallery || /\.(png|jpe?g|webp|gif)$/i.test(name)
+  const isGlb = /\.(glb|gltf)$/i.test(name)
+
+  if (isImage && url && /\.(png|jpe?g|webp|gif)$/i.test(name)) {
+    return (
+      <div className="aspect-video bg-night-950 flex items-center justify-center overflow-hidden">
+        <img src={url} alt={asset.file_name} className="max-w-full max-h-full object-contain" />
+      </div>
+    )
+  }
+  if (isGlb && url) {
+    return (
+      <div className="aspect-video bg-night-950">
+        <Canvas camera={{ position: [0, 0, 3.2], fov: 45 }} dpr={[1, 1.5]}>
+          <ambientLight intensity={0.8} />
+          <directionalLight position={[4, 6, 4]} intensity={1.1} />
+          <Suspense fallback={null}><FitGlb url={url} /></Suspense>
+          <OrbitControls enablePan={false} enableZoom={false} autoRotate autoRotateSpeed={2} />
+        </Canvas>
+      </div>
+    )
+  }
+  return (
+    <div className="aspect-video bg-night-950 flex flex-col items-center justify-center text-center px-3">
+      <span className="text-2xl text-white/20">⬡</span>
+      <span className="text-[10px] text-white/40 mt-1">No preview for this format</span>
+      {url && <a href={url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-[10px] text-neon-ice hover:underline mt-0.5">download</a>}
+    </div>
+  )
+}
+
+function FitGlb({ url }) {
+  const ref = useRef()
+  const { scene } = useGLTF(url)
+  const cloned = useRef()
+  if (!cloned.current) cloned.current = scene.clone(true)
+  useEffect(() => {
+    if (!ref.current) return
+    const box = new THREE.Box3().setFromObject(ref.current)
+    const size = box.getSize(new THREE.Vector3())
+    const center = box.getCenter(new THREE.Vector3())
+    const maxDim = Math.max(size.x, size.y, size.z) || 1
+    const s = 2 / maxDim
+    ref.current.scale.setScalar(s)
+    ref.current.position.sub(center.multiplyScalar(s))
+  }, [scene])
+  return <primitive ref={ref} object={cloned.current} />
+}
+
+/* ---------- small helpers ---------- */
 function Field({ label, hint, required, children }) {
   return (
     <div>

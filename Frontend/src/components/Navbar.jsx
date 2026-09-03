@@ -6,6 +6,7 @@ import { nav } from '../data/content.js'
 const ROUTES = {
   'Home': '/',
   'Projects': '/projects',
+  'Contact': '/contact',
 }
 
 export default function Navbar() {
