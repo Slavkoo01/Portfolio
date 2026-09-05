@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api.js'
 import AdminLayout from './AdminLayout.jsx'
 import RepositoryView from '../components/RepositoryView.jsx'
+import { useToast, Spinner } from '../components/Toast.jsx'
 
 /**
  * Projects management. Lists projects, lets you create/edit/delete, toggle
@@ -10,10 +11,12 @@ import RepositoryView from '../components/RepositoryView.jsx'
  * github_url, is_featured, is_published.
  */
 export default function ProjectsList() {
+  const toast = useToast()
   const [projects, setProjects] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState(null)
+  const [syncingId, setSyncingId] = useState(null)
   const [editing, setEditing] = useState(null) // project object or 'new' or null
   const [viewing, setViewing] = useState(null) // project whose code we're viewing
 
@@ -31,29 +34,36 @@ export default function ProjectsList() {
     setBusyId(p.id)
     try {
       await api.put(`/api/admin/projects/${p.id}`, { is_published: !p.is_published })
+      toast.success(p.is_published ? 'Project unpublished.' : 'Project published.')
       load()
-    } catch (e) { setError(e.message) } finally { setBusyId(null) }
+    } catch (e) { toast.error(e.message || 'Update failed') } finally { setBusyId(null) }
   }
 
   async function remove(p) {
     if (!confirm(`Delete "${p.title}"?`)) return
     setBusyId(p.id)
-    try { await api.del(`/api/admin/projects/${p.id}`); load() }
-    catch (e) { setError(e.message) } finally { setBusyId(null) }
+    try {
+      await api.del(`/api/admin/projects/${p.id}`)
+      toast.success('Project deleted.')
+      load()
+    } catch (e) { toast.error(e.message || 'Delete failed') } finally { setBusyId(null) }
   }
 
   async function sync(p) {
-    setBusyId(p.id)
+    setSyncingId(p.id)
     setError('')
+    const loadingId = toast.loading(`Syncing ${p.github_repo}…`)
     try {
       // 1) link the project → creates/ensures a cache row (idempotent)
       await api.post(`/api/admin/projects/${p.id}/github/link`)
       // 2) sync all linked repos (simplest reliable path)
       await api.post('/api/admin/github/sync')
-      alert('Sync complete. The public Projects page will now show this repo.')
+      toast.dismiss(loadingId)
+      toast.success('Sync complete — the repository is now cached.')
     } catch (e) {
-      setError(e.message || 'Sync failed (see console).')
-    } finally { setBusyId(null) }
+      toast.dismiss(loadingId)
+      toast.error(e.message || 'Sync failed (see console).')
+    } finally { setSyncingId(null) }
   }
 
   return (
@@ -111,9 +121,9 @@ export default function ProjectsList() {
                         </button>
                       )}
                       {p.github_owner && (
-                        <button onClick={() => sync(p)} disabled={busyId === p.id}
-                          className="rounded-lg px-3 py-1.5 text-xs bg-neon-ice/10 text-neon-ice hover:bg-neon-ice/20 transition">
-                          Sync
+                        <button onClick={() => sync(p)} disabled={syncingId === p.id || busyId === p.id}
+                          className="rounded-lg px-3 py-1.5 text-xs bg-neon-ice/10 text-neon-ice hover:bg-neon-ice/20 transition disabled:opacity-60 flex items-center gap-1.5">
+                          {syncingId === p.id ? <><Spinner className="!w-3 !h-3" /> Syncing…</> : 'Sync'}
                         </button>
                       )}
                       <button onClick={() => setEditing(p)}
@@ -144,7 +154,7 @@ export default function ProjectsList() {
               <h2 className="font-display text-xl font-bold">{viewing.title} — code</h2>
               <button onClick={() => setViewing(null)} className="rounded-lg px-4 py-2 text-sm bg-white/[0.06] hover:bg-white/10 transition">Close</button>
             </div>
-            <RepositoryView project={viewing} />
+            <RepositoryView project={viewing} admin />
           </div>
         </div>
       )}

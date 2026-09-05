@@ -8,7 +8,10 @@ import { api } from '../lib/api.js'
  * syntax-highlighted file content. Used by both the public Projects page and
  * the admin Projects table.
  */
-export default function RepositoryView({ project }) {
+export default function RepositoryView({ project, admin = false }) {
+  // admin reads hit /api/admin/projects/... which also return DRAFT projects;
+  // public reads hit /api/projects/... (published only).
+  const base = admin ? '/api/admin/projects' : '/api/projects'
   const [repo, setRepo] = useState(null)
   const [tree, setTree] = useState([])
   const [file, setFile] = useState(null)
@@ -22,8 +25,8 @@ export default function RepositoryView({ project }) {
 
     const slug = project.slug
     Promise.all([
-      api.get(`/api/projects/${slug}/repository`).catch(() => null),
-      api.get(`/api/projects/${slug}/repository/tree`).catch(() => null),
+      api.get(`${base}/${slug}/repository`).catch(() => null),
+      api.get(`${base}/${slug}/repository/tree`).catch(() => null),
     ])
       .then(([repoData, treeData]) => {
         if (!alive) return
@@ -43,7 +46,7 @@ export default function RepositoryView({ project }) {
 
   const openFile = useCallback(async (slug, path) => {
     try {
-      const d = await api.get(`/api/projects/${slug}/repository/file/${path}`)
+      const d = await api.get(`${base}/${slug}/repository/file/${path}`)
       setFile(d.file || d)
     } catch (e) {
       setFile({ path, content: null, error: e.message })

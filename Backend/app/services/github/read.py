@@ -17,8 +17,10 @@ class GitHubReadService:
         self.files = GithubFileRepository()
         self.projects = ProjectRepository()
 
-    def _repo_for_public_project(self, slug: str):
-        project = self.projects.get_by_slug(slug)  # published + non-deleted only
+    def _repo_for_public_project(self, slug: str, include_unpublished: bool = False):
+        # public reads see only published projects; admin reads pass
+        # include_unpublished=True to also see drafts.
+        project = self.projects.get_by_slug(slug, include_unpublished=include_unpublished)
         if project is None:
             raise NotFoundError("Project not found.", code="PROJECT_NOT_FOUND")
         repo = self.repos.get_by_project_id(project.id)
@@ -26,16 +28,16 @@ class GitHubReadService:
             raise NotFoundError("Repository not synced.", code="REPO_NOT_SYNCED")
         return repo
 
-    def get_repo(self, slug: str):
-        return self._repo_for_public_project(slug)
+    def get_repo(self, slug: str, include_unpublished: bool = False):
+        return self._repo_for_public_project(slug, include_unpublished)
 
-    def get_tree(self, slug: str) -> dict:
-        repo = self._repo_for_public_project(slug)
+    def get_tree(self, slug: str, include_unpublished: bool = False) -> dict:
+        repo = self._repo_for_public_project(slug, include_unpublished)
         rows = self.files.list_for_repo(repo.id)
         return self._build_tree(rows)
 
-    def get_file(self, slug: str, path: str):
-        repo = self._repo_for_public_project(slug)
+    def get_file(self, slug: str, path: str, include_unpublished: bool = False):
+        repo = self._repo_for_public_project(slug, include_unpublished)
         f = self.files.get_by_path(repo.id, path)
         if f is None:
             raise NotFoundError("File not found.", code="FILE_NOT_FOUND")

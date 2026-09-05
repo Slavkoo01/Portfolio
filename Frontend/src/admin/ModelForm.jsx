@@ -5,6 +5,7 @@ import { useGLTF, OrbitControls, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
 import { api } from '../lib/api.js'
 import AdminLayout from './AdminLayout.jsx'
+import { useToast, Spinner } from '../components/Toast.jsx'
 
 /**
  * Create/edit a 3D model with:
@@ -18,6 +19,7 @@ export default function ModelForm() {
   const { id } = useParams()
   const isEdit = id && id !== 'new'
   const navigate = useNavigate()
+  const toast = useToast()
 
   const [model, setModel] = useState(null)
   const [form, setForm] = useState({
@@ -70,13 +72,16 @@ export default function ModelForm() {
 
       if (isEdit) {
         await api.put(`/api/admin/models/${id}`, payload)
+        toast.success('Changes saved.')
         load()
       } else {
         const d = await api.post('/api/admin/models', payload)
+        toast.success('Model created.')
         navigate(`/admin/models/${(d.model || d).id}`)
       }
     } catch (e) {
-      setError(e.code === 'SLUG_TAKEN' ? 'Slug already taken.' : (e.message || 'Save failed'))
+      const msg = e.code === 'SLUG_TAKEN' ? 'Slug already taken.' : (e.message || 'Save failed')
+      setError(msg); toast.error(msg)
     } finally { setSaving(false) }
   }
 

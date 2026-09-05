@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import AdminLayout from './AdminLayout.jsx'
+import { useToast } from '../components/Toast.jsx'
 
 /**
  * 3D Models management — list all models with quick publish/unpublish and
  * delete, plus a link to create or edit. Data comes from /api/admin/models.
  */
 export default function ModelsList() {
+  const toast = useToast()
   const [models, setModels] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -27,9 +29,10 @@ export default function ModelsList() {
     setBusyId(m.id)
     try {
       await api.put(`/api/admin/models/${m.id}`, { is_published: !m.is_published })
+      toast.success(m.is_published ? 'Model unpublished.' : 'Model published.')
       load()
     } catch (e) {
-      setError(e.message || 'Update failed')
+      toast.error(e.message || 'Update failed')
     } finally {
       setBusyId(null)
     }
@@ -40,9 +43,10 @@ export default function ModelsList() {
     setBusyId(m.id)
     try {
       await api.del(`/api/admin/models/${m.id}`)
+      toast.success('Model deleted.')
       load()
     } catch (e) {
-      setError(e.message || 'Delete failed')
+      toast.error(e.message || 'Delete failed')
     } finally {
       setBusyId(null)
     }

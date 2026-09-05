@@ -15,7 +15,8 @@ from app.errors.exceptions import NotFoundError
 from app.repositories.github_repository import (
     GithubRepoRepository, GithubSyncRepository,
 )
-from app.schemas.github import GithubRepoOutSchema, GithubSyncOutSchema
+from app.schemas.github import GithubRepoOutSchema, GithubSyncOutSchema, GithubFileContentSchema
+from app.services.github.read import GitHubReadService
 from app.services.github.service import GitHubService
 from app.services.github.link import GitHubLinkService
 
@@ -23,6 +24,7 @@ admin_github_bp = Blueprint("admin_github", __name__, url_prefix="/api/admin")
 
 _repo_out = GithubRepoOutSchema()
 _sync_out = GithubSyncOutSchema()
+_gh_file_out = GithubFileContentSchema()
 
 
 @admin_github_bp.post("/projects/<int:project_id>/github/link")
@@ -62,3 +64,25 @@ def list_repos():
             "last_sync": _sync_out.dump(latest) if latest else None,
         })
     return jsonify({"repositories": out})
+
+
+# ── Admin repository reads (see drafts too, unlike the public routes) ──────────
+
+@admin_github_bp.get("/projects/<slug>/repository")
+@admin_required
+def admin_project_repository(slug: str):
+    repo = GitHubReadService().get_repo(slug, include_unpublished=True)
+    return jsonify({"repository": _repo_out.dump(repo)})
+
+
+@admin_github_bp.get("/projects/<slug>/repository/tree")
+@admin_required
+def admin_project_tree(slug: str):
+    return jsonify(GitHubReadService().get_tree(slug, include_unpublished=True))
+
+
+@admin_github_bp.get("/projects/<slug>/repository/file/<path:file_path>")
+@admin_required
+def admin_project_file(slug: str, file_path: str):
+    f = GitHubReadService().get_file(slug, file_path, include_unpublished=True)
+    return jsonify({"file": _gh_file_out.dump(f)})

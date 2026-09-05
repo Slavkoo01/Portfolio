@@ -35,7 +35,9 @@ class ProjectService:
 
     # ---------- writes ----------
     def create(self, owner_id: int, data: dict) -> Project:
-        slug = self._resolve_slug(data.get("slug"), data["title"])
+        slug = self._resolve_slug(
+            data.get("slug"), data["title"], data.get("github_repo")
+        )
         project = Project(
             owner_id=owner_id,
             title=data["title"],
@@ -73,9 +75,16 @@ class ProjectService:
         self.projects.commit()
 
     # ---------- helpers ----------
-    def _resolve_slug(self, provided: str | None, title: str) -> str:
+    def _resolve_slug(self, provided: str | None, title: str,
+                      github_repo: str | None = None) -> str:
+        # 1. An explicit slug always wins.
         if provided:
             if self.projects.slug_exists(provided):
                 raise ValidationError("Slug already in use.", code="SLUG_TAKEN")
             return provided
+        # 2. Prefer the GitHub repo name — it's unique and stable, so the slug
+        #    never inherits a typo from the display title.
+        if github_repo:
+            return unique_slug(github_repo, self.projects.slug_exists)
+        # 3. Fall back to the title for projects without a repo.
         return unique_slug(title, self.projects.slug_exists)

@@ -38,25 +38,19 @@ export default function Dashboard() {
       {data && (
         <div className="space-y-8">
           {/* Stat cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <StatCard label="3D Models" value={data.counts.models}
               sub={`${data.counts.models_published} published`} to="/admin/models" accent="violet" />
             <StatCard label="Projects" value={data.counts.projects}
               sub={`${data.counts.projects_published} published`} to="/admin/projects" accent="ice" />
-            <StatCard label="Messages" value={data.counts.messages}
-              sub={`${data.counts.messages_unread} unread`} to="/admin/messages" accent="magenta" />
-            <StatCard label="Visitors" value={data.views.total}
-              sub={`${data.views.last_30_days} this month`} accent="amber" />
           </div>
 
           {/* Recent lists */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <RecentList title="Recent 3D Models" items={data.recent.models}
               render={(m) => m.title} sub={(m) => m.is_published ? 'published' : 'draft'} />
             <RecentList title="Recent Projects" items={data.recent.projects}
               render={(p) => p.title} sub={(p) => p.is_published ? 'published' : 'draft'} />
-            <RecentList title="Recent Messages" items={data.recent.messages}
-              render={(m) => m.name} sub={(m) => m.status?.toLowerCase()} />
           </div>
 
           {/* GitHub status */}
