@@ -5,7 +5,6 @@ import { useGLTF, OrbitControls, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
 import { api } from '../lib/api.js'
 import AdminLayout from './AdminLayout.jsx'
-import { useToast, Spinner } from '../components/Toast.jsx'
 
 /**
  * Create/edit a 3D model with:
@@ -19,7 +18,6 @@ export default function ModelForm() {
   const { id } = useParams()
   const isEdit = id && id !== 'new'
   const navigate = useNavigate()
-  const toast = useToast()
 
   const [model, setModel] = useState(null)
   const [form, setForm] = useState({
@@ -27,7 +25,9 @@ export default function ModelForm() {
     position_x: 0, position_y: 0, position_z: 0,
     rotation_x: 0, rotation_y: 0, rotation_z: 0,
     scale_x: 1, scale_y: 1, scale_z: 1,
+    tags: '', is_rigged: false, texture_info: '', software_ids: [],
   })
+  const [allSoftware, setAllSoftware] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
@@ -46,6 +46,9 @@ export default function ModelForm() {
           position_x: num(m.position_x, 0), position_y: num(m.position_y, 0), position_z: num(m.position_z, 0),
           rotation_x: num(m.rotation_x, 0), rotation_y: num(m.rotation_y, 0), rotation_z: num(m.rotation_z, 0),
           scale_x: num(m.scale_x, 1), scale_y: num(m.scale_y, 1), scale_z: num(m.scale_z, 1),
+          tags: Array.isArray(m.tags) ? m.tags.join(', ') : (m.tags || ''),
+          is_rigged: !!m.is_rigged, texture_info: m.texture_info || '',
+          software_ids: (m.software || []).map((sw) => sw.id),
         }))
       })
       .catch((e) => setError(e.message))
@@ -53,6 +56,9 @@ export default function ModelForm() {
   }, [id, isEdit])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    api.get('/api/software').then((d) => setAllSoftware(d.software || [])).catch(() => {})
+  }, [])
 
   function up(k, v) { setForm((f) => ({ ...f, [k]: v })) }
 
@@ -64,6 +70,10 @@ export default function ModelForm() {
         title: form.title.trim(),
         description: form.description.trim() || null,
         is_published: form.is_published, is_featured: form.is_featured,
+        tags: form.tags.trim() || null,
+        is_rigged: form.is_rigged,
+        texture_info: form.texture_info.trim() || null,
+        software_ids: form.software_ids,
         position_x: +form.position_x, position_y: +form.position_y, position_z: +form.position_z,
         rotation_x: +form.rotation_x, rotation_y: +form.rotation_y, rotation_z: +form.rotation_z,
         scale_x: +form.scale_x, scale_y: +form.scale_y, scale_z: +form.scale_z,
@@ -72,16 +82,13 @@ export default function ModelForm() {
 
       if (isEdit) {
         await api.put(`/api/admin/models/${id}`, payload)
-        toast.success('Changes saved.')
         load()
       } else {
         const d = await api.post('/api/admin/models', payload)
-        toast.success('Model created.')
         navigate(`/admin/models/${(d.model || d).id}`)
       }
     } catch (e) {
-      const msg = e.code === 'SLUG_TAKEN' ? 'Slug already taken.' : (e.message || 'Save failed')
-      setError(msg); toast.error(msg)
+      setError(e.code === 'SLUG_TAKEN' ? 'Slug already taken.' : (e.message || 'Save failed'))
     } finally { setSaving(false) }
   }
 
@@ -121,6 +128,45 @@ export default function ModelForm() {
                 <Field label="Description">
                   <textarea className="minput resize-none" rows={3} value={form.description} onChange={(e) => up('description', e.target.value)} />
                 </Field>
+
+                {/* --- Showroom metadata --- */}
+                <Field label="Tags" hint="comma-separated">
+                  <input className="minput" value={form.tags} onChange={(e) => up('tags', e.target.value)} placeholder="Robot, Sci-Fi, Hard Surface" />
+                </Field>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Texture info" hint="e.g. 4K PBR">
+                    <input className="minput" value={form.texture_info} onChange={(e) => up('texture_info', e.target.value)} placeholder="4K PBR" />
+                  </Field>
+                  <div className="flex items-end pb-2">
+                    <Toggle label="Rigged" checked={form.is_rigged} onChange={(v) => up('is_rigged', v)} />
+                  </div>
+                </div>
+
+                {/* Software picker */}
+                <Field label="Software used">
+                  {allSoftware.length === 0 ? (
+                    <p className="text-xs text-white/30">No software in the database yet.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {allSoftware.map((sw) => {
+                        const on = form.software_ids.includes(sw.id)
+                        return (
+                          <button key={sw.id} type="button"
+                            onClick={() => up('software_ids', on
+                              ? form.software_ids.filter((x) => x !== sw.id)
+                              : [...form.software_ids, sw.id])}
+                            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition border ${
+                              on ? 'bg-neon-violet/15 border-neon-violet/40 text-white' : 'bg-white/[0.04] border-white/10 text-white/60 hover:text-white'
+                            }`}>
+                            {sw.icon_url && <img src={sw.icon_url} alt="" className="w-4 h-4 object-contain" />}
+                            {sw.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </Field>
+
                 <div className="flex gap-6">
                   <Toggle label="Published" checked={form.is_published} onChange={(v) => up('is_published', v)} />
                   <Toggle label="Featured" checked={form.is_featured} onChange={(v) => up('is_featured', v)} />

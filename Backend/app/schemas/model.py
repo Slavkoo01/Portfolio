@@ -16,6 +16,13 @@ class CategoryOutSchema(Schema):
     description = fields.String(allow_none=True)
 
 
+class SoftwareOutSchema(Schema):
+    id = fields.Integer()
+    name = fields.String()
+    slug = fields.String()
+    icon_url = fields.String(allow_none=True)
+
+
 class ModelAssetOutSchema(Schema):
     id = fields.Integer()
     asset_type = fields.String()
@@ -58,11 +65,19 @@ class ModelOutSchema(Schema):
     scale_x = fields.Float()
     scale_y = fields.Float()
     scale_z = fields.Float()
+    tags = fields.Method("split_tags")
+    is_rigged = fields.Boolean()
+    texture_info = fields.String(allow_none=True)
     category = fields.Nested(CategoryOutSchema, allow_none=True)
+    software = fields.Nested(SoftwareOutSchema, many=True)
     assets = fields.Nested(ModelAssetOutSchema, many=True)
     animations = fields.Nested(ModelAnimationOutSchema, many=True)
     created_at = fields.DateTime()
     updated_at = fields.DateTime()
+
+    def split_tags(self, obj):
+        raw = getattr(obj, "tags", None)
+        return [t.strip() for t in raw.split(",") if t.strip()] if raw else []
 
 
 # ---------- input (create / update) ----------
@@ -90,6 +105,10 @@ class ModelCreateSchema(Schema):
     scale_x = fields.Float(load_default=1.0)
     scale_y = fields.Float(load_default=1.0)
     scale_z = fields.Float(load_default=1.0)
+    tags = fields.String(allow_none=True)
+    is_rigged = fields.Boolean(load_default=False)
+    texture_info = fields.String(allow_none=True)
+    software_ids = fields.List(fields.Integer(), load_default=list)
 
 
 class ModelUpdateSchema(Schema):
@@ -116,3 +135,7 @@ class ModelUpdateSchema(Schema):
     scale_x = fields.Float()
     scale_y = fields.Float()
     scale_z = fields.Float()
+    tags = fields.String(allow_none=True)
+    is_rigged = fields.Boolean()
+    texture_info = fields.String(allow_none=True)
+    software_ids = fields.List(fields.Integer())

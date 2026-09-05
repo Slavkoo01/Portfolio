@@ -68,7 +68,11 @@ class ModelService:
             scale_x=data.get("scale_x", 1.0),
             scale_y=data.get("scale_y", 1.0),
             scale_z=data.get("scale_z", 1.0),
+            tags=data.get("tags"),
+            is_rigged=data.get("is_rigged", False),
+            texture_info=data.get("texture_info"),
         )
+        self._set_software(model, data.get("software_ids"))
         self.models.add(model)
         self.models.commit()
         return model
@@ -92,12 +96,26 @@ class ModelService:
         )
         for field in ("title", "description", "category_id", "is_featured",
                       "is_published", "polygon_count", "vertex_count",
+                      "tags", "is_rigged", "texture_info",
                       *transform_fields):
             if field in data:
                 setattr(model, field, data[field])
 
+        if "software_ids" in data:
+            self._set_software(model, data["software_ids"])
+
         self.models.commit()
         return model
+
+    def _set_software(self, model, software_ids):
+        """Replace the model's software list from a list of software IDs."""
+        if not software_ids:
+            model.software = []
+            return
+        from app.models.software import Software
+        from app.extensions import db
+        rows = db.session.query(Software).filter(Software.id.in_(software_ids)).all()
+        model.software = rows
 
     def soft_delete(self, model_id: int) -> None:
         model = self.get_admin_by_id(model_id)

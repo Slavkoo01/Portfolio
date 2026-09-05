@@ -90,6 +90,11 @@ class Model(Base, TimestampMixin, SoftDeleteMixin):
     scale_y: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     scale_z: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
 
+    # --- showroom metadata ---
+    tags: Mapped[str | None] = mapped_column(Text)                 # comma-separated
+    is_rigged: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    texture_info: Mapped[str | None] = mapped_column(String(120))  # e.g. "4K PBR"
+
     # --- relationships ---
     owner: Mapped["User"] = relationship(back_populates="models")
     category: Mapped["ModelCategory | None"] = relationship(back_populates="models")
