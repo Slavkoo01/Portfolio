@@ -3,6 +3,7 @@ import { AuthProvider } from './admin/AuthContext.jsx'
 import { ToastProvider } from './components/Toast.jsx'
 import ProtectedRoute from './admin/ProtectedRoute.jsx'
 import Home from './pages/Home.jsx'
+import Models from './pages/Models.jsx'
 import Projects from './pages/Projects.jsx'
 import Contact from './pages/Contact.jsx'
 import Login from './admin/Login.jsx'
@@ -20,6 +21,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/models" element={<Models />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/admin/login" element={<Login />} />

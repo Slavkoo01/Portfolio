@@ -5,6 +5,7 @@ import { nav } from '../data/content.js'
 // which nav items are real routed pages vs in-page anchors
 const ROUTES = {
   'Home': '/',
+  '3D Models': '/models',
   'Projects': '/projects',
   'Contact': '/contact',
 }
