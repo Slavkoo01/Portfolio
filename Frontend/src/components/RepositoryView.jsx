@@ -97,7 +97,7 @@ export default function RepositoryView({ project, admin = false }) {
 
       <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-5">
         {/* File tree — fixed height, scrolls inside */}
-        <div className="glass rounded-2xl p-4 h-[65vh] min-h-[380px] max-h-[680px] overflow-auto">
+        <div className="glass rounded-2xl p-4 h-[35vh] md:h-[65vh] min-h-[220px] md:min-h-[380px] max-h-[680px] overflow-auto">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-white/40 font-mono">FILES</p>
             <div className="flex gap-1">

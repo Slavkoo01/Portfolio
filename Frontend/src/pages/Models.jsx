@@ -46,8 +46,8 @@ export default function Models() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[190px_1fr] gap-6">
-            {/* Category sidebar */}
-            <aside className="space-y-1">
+            {/* Category sidebar — horizontal chips on mobile, vertical on desktop */}
+            <aside className="flex lg:flex-col gap-2 lg:gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <CatItem label="All Models" active={activeCat === ''} onClick={() => setActiveCat('')} />
               {categories.map((c) => (
                 <CatItem key={c.slug} label={c.name} active={activeCat === c.slug} onClick={() => setActiveCat(c.slug)} />
@@ -78,8 +78,8 @@ export default function Models() {
 function CatItem({ label, active, onClick }) {
   return (
     <button onClick={onClick}
-      className={`w-full text-left rounded-xl px-4 py-2.5 text-sm transition ${
-        active ? 'bg-neon-violet/15 text-white border border-neon-violet/30' : 'text-white/55 hover:text-white hover:bg-white/[0.04]'
+      className={`shrink-0 lg:w-full text-left whitespace-nowrap rounded-xl px-4 py-2.5 text-sm transition ${
+        active ? 'bg-neon-violet/15 text-white border border-neon-violet/30' : 'text-white/55 hover:text-white hover:bg-white/[0.04] border border-transparent'
       }`}>
       {label}
     </button>
