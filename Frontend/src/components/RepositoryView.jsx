@@ -85,7 +85,7 @@ export default function RepositoryView({ project, admin = false }) {
         <div className="glass rounded-2xl p-5 flex flex-wrap items-center gap-6">
           <div>
             <div className="font-display font-semibold text-lg">{repo.name || project.github_repo}</div>
-            {repo.description && <div className="text-sm text-white/50">{repo.description}</div>}
+            {repo.description && <div className="text-sm text-white/50 break-words">{repo.description}</div>}
           </div>
           <div className="flex items-center gap-5 text-sm text-white/60 ml-auto">
             {repo.language && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-neon-ice" />{repo.language}</span>}
@@ -96,8 +96,8 @@ export default function RepositoryView({ project, admin = false }) {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-5">
-        {/* File tree */}
-        <div className="glass rounded-2xl p-4 max-h-[520px] overflow-auto">
+        {/* File tree — fixed height, scrolls inside */}
+        <div className="glass rounded-2xl p-4 h-[65vh] min-h-[380px] max-h-[680px] overflow-auto">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-white/40 font-mono">FILES</p>
             <div className="flex gap-1">
@@ -115,12 +115,12 @@ export default function RepositoryView({ project, admin = false }) {
           )}
         </div>
 
-        {/* File content */}
-        <div className="glass rounded-2xl p-5 max-h-[520px] overflow-auto">
+        {/* File content — fixed height; header stays, code scrolls */}
+        <div className="glass rounded-2xl h-[65vh] min-h-[380px] max-h-[680px] flex flex-col overflow-hidden">
           {!file ? (
-            <p className="text-sm text-white/30">Select a file to view its contents.</p>
+            <div className="p-5 text-sm text-white/30">Select a file to view its contents.</div>
           ) : file.content == null ? (
-            <div className="text-sm text-white/40">
+            <div className="p-5 text-sm text-white/40">
               <p className="font-mono text-white/60 mb-2">{file.path}</p>
               {(() => {
                 const isText = /\.(md|txt|rst|py|js|jsx|ts|tsx|json|ya?ml|toml|ini|cfg|xml|html?|css|scss|c|cpp|h|hpp|cs|java|go|rs|rb|php|sh|sql|kt|swift|lock|gitignore|env)$/i.test(file.file_name || file.path || '')
@@ -132,12 +132,22 @@ export default function RepositoryView({ project, admin = false }) {
             </div>
           ) : (
             <>
-              <p className="font-mono text-xs text-white/50 mb-3 pb-3 border-b border-white/[0.06]">{file.path}</p>
-              <CodeView path={file.path} content={file.content} />
+              <p className="font-mono text-xs text-white/50 px-5 pt-5 pb-3 border-b border-white/[0.06] shrink-0">{file.path}</p>
+              <div className="flex-1 overflow-auto p-5">
+                <CodeView path={file.path} content={file.content} />
+              </div>
             </>
           )}
         </div>
       </div>
+
+      {/* Description below the code window */}
+      {project.description && (
+        <div className="glass rounded-2xl p-6">
+          <h3 className="font-display font-semibold mb-2">About this project</h3>
+          <p className="text-sm text-white/60 leading-relaxed break-words">{project.description}</p>
+        </div>
+      )}
     </div>
   )
 }

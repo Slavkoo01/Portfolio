@@ -19,6 +19,7 @@ ALLOWED_EXTENSIONS: dict[str, set[str]] = {
     AssetType.MODEL: {".glb", ".gltf", ".fbx", ".obj"},
     AssetType.TEXTURE: {".png", ".jpg", ".jpeg", ".webp", ".tga", ".ktx2"},
     AssetType.THUMBNAIL: {".png", ".jpg", ".jpeg", ".webp"},
+    AssetType.RENDER: {".png", ".jpg", ".jpeg", ".webp"},
     AssetType.ANIMATION: {".glb", ".gltf", ".fbx"},
     AssetType.OTHER: {".png", ".jpg", ".jpeg", ".webp", ".glb", ".gltf",
                       ".fbx", ".obj", ".zip", ".pdf"},

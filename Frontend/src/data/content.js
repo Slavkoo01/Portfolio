@@ -15,4 +15,4 @@ export const featured = [
   { title: 'Floating Sanctuary', kind: '3D Scene', accent: 'ice', blurb: 'The island above — real-time, interactive, exportable.' },
   { title: 'Portfolio Platform', kind: 'Full-stack', accent: 'amber', blurb: 'Flask + PostgreSQL backend with GitHub repository caching.' },
 ]
-export const nav = ['Home', '3D Models', 'Projects', 'About', 'Contact']
+export const nav = ['Home', '3D Models', 'Projects', 'Contact']

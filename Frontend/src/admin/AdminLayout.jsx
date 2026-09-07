@@ -8,6 +8,8 @@ import { useAuth } from './AuthContext.jsx'
 const NAV = [
   { to: '/admin', label: 'Dashboard', icon: '◈' },
   { to: '/admin/models', label: '3D Models', icon: '◆' },
+  { to: '/admin/software', label: 'Software', icon: '⚙' },
+  { to: '/admin/stats', label: 'Statistics', icon: '▦' },
   { to: '/admin/projects', label: 'Projects', icon: '⬡' },
 ]
 

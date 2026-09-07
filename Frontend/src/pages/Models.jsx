@@ -146,10 +146,10 @@ function Showroom({ slug, models, onSelect }) {
             <>
               <h2 className="font-display text-2xl font-bold">{model.title}</h2>
               {tags.length > 0 && (
-                <p className="text-sm text-white/40 mt-1">{tags.join(', ')}</p>
+                <p className="text-sm text-white/40 mt-1 break-words">{tags.join(', ')}</p>
               )}
               {model.description && (
-                <p className="text-sm text-white/70 leading-relaxed mt-4">{model.description}</p>
+                <p className="text-sm text-white/70 leading-relaxed mt-4 break-words">{model.description}</p>
               )}
               <ul className="mt-5 space-y-2 text-sm">
                 {model.polygon_count != null && <Spec label="Triangles" value={model.polygon_count.toLocaleString()} />}
@@ -172,11 +172,32 @@ function Showroom({ slug, models, onSelect }) {
         ))}
       </div>
 
+      {/* Renders gallery (if any) */}
+      {(() => {
+        const renders = assets.filter((a) => a.asset_type === 'RENDER')
+        return renders.length > 0 ? (
+          <div className="glass rounded-2xl p-6">
+            <h3 className="font-display font-semibold mb-4">Renders</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {renders.map((r) => {
+                const u = assetUrl(r)
+                return u ? (
+                  <a key={r.id} href={u} target="_blank" rel="noreferrer"
+                    className="aspect-[4/3] rounded-xl overflow-hidden bg-night-950 hover:opacity-90 transition">
+                    <img src={u} alt={r.file_name} className="w-full h-full object-cover" />
+                  </a>
+                ) : null
+              })}
+            </div>
+          </div>
+        ) : null
+      })()}
+
       {/* Bottom: description + software */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass rounded-2xl p-6">
           <h3 className="font-display font-semibold mb-3">Description</h3>
-          <p className="text-sm text-white/60 leading-relaxed">
+          <p className="text-sm text-white/60 leading-relaxed break-words">
             {model?.description || 'No description provided.'}
           </p>
         </div>
@@ -186,10 +207,10 @@ function Showroom({ slug, models, onSelect }) {
             <div className="flex flex-wrap gap-3">
               {model.software.map((sw) => (
                 <div key={sw.id} title={sw.name}
-                  className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center">
+                  className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center overflow-hidden p-2">
                   {sw.icon_url
-                    ? <img src={sw.icon_url} alt={sw.name} className="w-6 h-6 object-contain" />
-                    : <span className="text-[10px] text-white/50 text-center px-1">{sw.name}</span>}
+                    ? <img src={sw.icon_url} alt={sw.name} className="max-w-full max-h-full object-contain" />
+                    : <span className="text-xs font-semibold text-neon-violet/80">{swInitials(sw.name)}</span>}
                 </div>
               ))}
             </div>
@@ -198,8 +219,33 @@ function Showroom({ slug, models, onSelect }) {
           )}
         </div>
       </div>
+
+      {/* Textures (if any) */}
+      {(() => {
+        const textures = assets.filter((a) => a.asset_type === 'TEXTURE')
+        return textures.length > 0 ? (
+          <div className="glass rounded-2xl p-6">
+            <h3 className="font-display font-semibold mb-4">Textures</h3>
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              {textures.map((t) => {
+                const u = assetUrl(t)
+                return u ? (
+                  <a key={t.id} href={u} target="_blank" rel="noreferrer"
+                    className="aspect-square rounded-lg overflow-hidden bg-night-950 hover:opacity-90 transition">
+                    <img src={u} alt={t.file_name} className="w-full h-full object-cover" />
+                  </a>
+                ) : null
+              })}
+            </div>
+          </div>
+        ) : null
+      })()}
     </div>
   )
+}
+
+function swInitials(name) {
+  return name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
 function Spec({ label, value }) {

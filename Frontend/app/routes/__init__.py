@@ -25,7 +25,6 @@ def register_blueprints(app: Flask) -> None:
     from app.routes.admin.projects import admin_projects_bp
     from app.routes.admin.assets import admin_assets_bp
     from app.routes.admin.github import admin_github_bp
-    from app.routes.stats import stats_bp, admin_stats_bp
     from app.routes.admin.categories import admin_categories_bp
     from app.routes.admin.software import admin_software_bp
     from app.routes.admin.messages import admin_messages_bp
@@ -39,8 +38,6 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(admin_models_bp)
     app.register_blueprint(admin_projects_bp)
     app.register_blueprint(admin_assets_bp)
-    app.register_blueprint(stats_bp)
-    app.register_blueprint(admin_stats_bp)
     app.register_blueprint(admin_categories_bp)
     app.register_blueprint(admin_software_bp)
     app.register_blueprint(admin_github_bp)

@@ -10,6 +10,8 @@ import Login from './admin/Login.jsx'
 import Dashboard from './admin/Dashboard.jsx'
 import ModelsList from './admin/ModelsList.jsx'
 import ModelForm from './admin/ModelForm.jsx'
+import SoftwareList from './admin/SoftwareList.jsx'
+import StatsEditor from './admin/StatsEditor.jsx'
 import ProjectsList from './admin/ProjectsList.jsx'
 
 const guard = (el) => <ProtectedRoute>{el}</ProtectedRoute>
@@ -29,6 +31,8 @@ export default function App() {
             <Route path="/admin/models" element={guard(<ModelsList />)} />
             <Route path="/admin/models/new" element={guard(<ModelForm />)} />
             <Route path="/admin/models/:id" element={guard(<ModelForm />)} />
+            <Route path="/admin/software" element={guard(<SoftwareList />)} />
+            <Route path="/admin/stats" element={guard(<StatsEditor />)} />
             <Route path="/admin/projects" element={guard(<ProjectsList />)} />
           </Routes>
         </BrowserRouter>

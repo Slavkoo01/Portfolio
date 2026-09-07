@@ -5,6 +5,7 @@ import { useGLTF, OrbitControls, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
 import { api } from '../lib/api.js'
 import AdminLayout from './AdminLayout.jsx'
+import { useToast } from '../components/Toast.jsx'
 
 /**
  * Create/edit a 3D model with:
@@ -25,9 +26,10 @@ export default function ModelForm() {
     position_x: 0, position_y: 0, position_z: 0,
     rotation_x: 0, rotation_y: 0, rotation_z: 0,
     scale_x: 1, scale_y: 1, scale_z: 1,
-    tags: '', is_rigged: false, texture_info: '', software_ids: [],
+    tags: '', is_rigged: false, texture_info: '', software_ids: [], category_id: '',
   })
   const [allSoftware, setAllSoftware] = useState([])
+  const [allCategories, setAllCategories] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
@@ -48,6 +50,7 @@ export default function ModelForm() {
           scale_x: num(m.scale_x, 1), scale_y: num(m.scale_y, 1), scale_z: num(m.scale_z, 1),
           tags: Array.isArray(m.tags) ? m.tags.join(', ') : (m.tags || ''),
           is_rigged: !!m.is_rigged, texture_info: m.texture_info || '',
+          category_id: m.category?.id || m.category_id || '',
           software_ids: (m.software || []).map((sw) => sw.id),
         }))
       })
@@ -57,8 +60,13 @@ export default function ModelForm() {
 
   useEffect(() => { load() }, [load])
   useEffect(() => {
-    api.get('/api/software').then((d) => setAllSoftware(d.software || [])).catch(() => {})
+    api.get('/api/admin/software').then((d) => setAllSoftware(d.software || [])).catch(() => {})
+    loadCategories()
   }, [])
+
+  function loadCategories() {
+    api.get('/api/admin/categories').then((d) => setAllCategories(d.categories || [])).catch(() => {})
+  }
 
   function up(k, v) { setForm((f) => ({ ...f, [k]: v })) }
 
@@ -70,6 +78,7 @@ export default function ModelForm() {
         title: form.title.trim(),
         description: form.description.trim() || null,
         is_published: form.is_published, is_featured: form.is_featured,
+        category_id: form.category_id ? Number(form.category_id) : null,
         tags: form.tags.trim() || null,
         is_rigged: form.is_rigged,
         texture_info: form.texture_info.trim() || null,
@@ -130,6 +139,14 @@ export default function ModelForm() {
                 </Field>
 
                 {/* --- Showroom metadata --- */}
+                <Field label="Category" hint="required for public display">
+                  <CategoryPicker
+                    value={form.category_id}
+                    categories={allCategories}
+                    onChange={(id) => up('category_id', id)}
+                    onCategoriesChanged={loadCategories}
+                  />
+                </Field>
                 <Field label="Tags" hint="comma-separated">
                   <input className="minput" value={form.tags} onChange={(e) => up('tags', e.target.value)} placeholder="Robot, Sci-Fi, Hard Surface" />
                 </Field>
@@ -158,7 +175,7 @@ export default function ModelForm() {
                             className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition border ${
                               on ? 'bg-neon-violet/15 border-neon-violet/40 text-white' : 'bg-white/[0.04] border-white/10 text-white/60 hover:text-white'
                             }`}>
-                            {sw.icon_url && <img src={sw.icon_url} alt="" className="w-4 h-4 object-contain" />}
+                            {sw.icon_url && <img src={sw.icon_url} alt="" className="w-4 h-4 object-contain shrink-0" />}
                             {sw.name}
                           </button>
                         )
@@ -243,6 +260,13 @@ export default function ModelForm() {
                     title="Model" hint="One GLB with everything: mesh, textures, and animations."
                     modelId={id} assetType="MODEL" single accept=".glb,.gltf"
                     items={glb ? [glb] : []} onChange={load}
+                  />
+
+                  {/* Renders gallery — multiple rendered images */}
+                  <UploadSection
+                    title="Renders" hint="Your rendered images (shown as a gallery)."
+                    modelId={id} assetType="RENDER" accept="image/*"
+                    items={assets.filter((a) => a.asset_type === 'RENDER')} onChange={load} gallery
                   />
 
                   {/* Textures gallery — shown to visitors as 'textures I made' */}
@@ -563,3 +587,87 @@ function Toggle({ label, checked, onChange }) {
 function assetUrl(a) { return a.url || (a.storage_key ? `/files/${a.storage_key}` : null) }
 function num(v, d) { const n = parseFloat(v); return Number.isFinite(n) ? n : d }
 function deg(d) { return (d * Math.PI) / 180 }
+
+/* ---------- Category picker: choose existing, add new, or delete ---------- */
+function CategoryPicker({ value, categories, onChange, onCategoriesChanged }) {
+  const toast = useToast()
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState('')
+
+  async function createNew() {
+    const name = newName.trim()
+    if (!name) return
+    try {
+      const d = await api.post('/api/admin/categories', { name })
+      const cat = d.category || d
+      toast.success(`Category "${cat.name}" added.`)
+      onCategoriesChanged?.()
+      onChange(String(cat.id))   // select the new one
+      setNewName(''); setAdding(false)
+    } catch (e) {
+      toast.error(e.message || 'Failed to add category')
+    }
+  }
+
+  async function removeCat(cat, e) {
+    e.stopPropagation()
+    const warn = cat.model_count > 0
+      ? `Delete "${cat.name}"? ${cat.model_count} model(s) will lose their category and be hidden from the public site until reassigned.`
+      : `Delete "${cat.name}"?`
+    if (!confirm(warn)) return
+    try {
+      await api.del(`/api/admin/categories/${cat.id}`)
+      toast.success('Category deleted.')
+      if (String(value) === String(cat.id)) onChange('')
+      onCategoriesChanged?.()
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete')
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* existing categories as selectable chips */}
+      <div className="flex flex-wrap gap-2">
+        {categories.length === 0 && !adding && (
+          <span className="text-xs text-white/30">No categories yet — add one.</span>
+        )}
+        {categories.map((c) => {
+          const on = String(value) === String(c.id)
+          return (
+            <span key={c.id}
+              className={`group inline-flex items-center gap-1.5 rounded-lg pl-3 pr-1.5 py-1.5 text-xs border transition cursor-pointer ${
+                on ? 'bg-neon-violet/15 border-neon-violet/40 text-white' : 'bg-white/[0.04] border-white/10 text-white/60 hover:text-white'
+              }`}
+              onClick={() => onChange(String(c.id))}>
+              {c.name}
+              {c.model_count != null && <span className="text-white/30">({c.model_count})</span>}
+              <button type="button" onClick={(e) => removeCat(c, e)}
+                className="opacity-0 group-hover:opacity-100 text-red-300/70 hover:text-red-300 transition ml-0.5">✕</button>
+            </span>
+          )
+        })}
+
+        {/* add-new toggle */}
+        {!adding && (
+          <button type="button" onClick={() => setAdding(true)}
+            className="rounded-lg px-3 py-1.5 text-xs bg-white/[0.04] border border-dashed border-white/20 text-white/50 hover:text-white transition">
+            + New
+          </button>
+        )}
+      </div>
+
+      {/* new category input */}
+      {adding && (
+        <div className="flex items-center gap-2">
+          <input autoFocus value={newName} onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); createNew() } if (e.key === 'Escape') setAdding(false) }}
+            placeholder="New category name"
+            className="flex-1 rounded-lg bg-white/[0.04] border border-white/10 px-3 py-1.5 text-sm outline-none focus:border-neon-violet/50" />
+          <button type="button" onClick={createNew} className="rounded-lg px-3 py-1.5 text-xs bg-neon-violet/20 text-neon-violet">Add</button>
+          <button type="button" onClick={() => { setAdding(false); setNewName('') }} className="rounded-lg px-3 py-1.5 text-xs bg-white/[0.06]">Cancel</button>
+        </div>
+      )}
+    </div>
+  )
+}

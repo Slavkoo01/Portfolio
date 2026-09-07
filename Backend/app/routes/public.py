@@ -55,15 +55,6 @@ def list_categories():
     return jsonify({"categories": _category_out.dump(cats)})
 
 
-@public_bp.get("/software")
-def list_software():
-    from app.models.software import Software
-    from app.extensions import db
-    from app.schemas.model import SoftwareOutSchema
-    rows = db.session.query(Software).order_by(Software.name).all()
-    return jsonify({"software": SoftwareOutSchema(many=True).dump(rows)})
-
-
 @public_bp.get("/models/<slug>")
 def get_model(slug: str):
     model = ModelService().get_public_by_slug(slug)

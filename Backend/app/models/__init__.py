@@ -26,6 +26,7 @@ from app.models.github import (  # noqa: F401
 )
 from app.models.contact import ContactMessage  # noqa: F401
 from app.models.analytics import PageView  # noqa: F401
+from app.models.site_stats import SiteStat  # noqa: F401
 
 __all__ = [
     "Base",

@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { Link } from 'react-router-dom'
 import Scene from '../three/Scene.jsx'
 import Stats from '../components/Stats.jsx'
 import { profile } from '../data/content.js'
@@ -27,8 +28,7 @@ export default function Hero() {
           <h2 className="font-display text-2xl md:text-4xl font-semibold text-gradient mb-6 animate-fade-up" style={{ opacity: 0, animationDelay: '0.3s' }}>{profile.role}</h2>
           <p className="text-white/60 text-lg leading-relaxed mb-8 animate-fade-up" style={{ opacity: 0, animationDelay: '0.4s' }}>{profile.tagline}</p>
           <div className="flex flex-wrap gap-4 mb-12 animate-fade-up" style={{ opacity: 0, animationDelay: '0.5s' }}>
-            <a href="#projects" className="rounded-full bg-gradient-to-r from-neon-violet to-neon-magenta px-7 py-3 font-medium text-white shadow-lg shadow-neon-violet/25 hover:shadow-neon-violet/40 transition-shadow">View My Work</a>
-            <a href="#" className="glass rounded-full px-7 py-3 font-medium hover:bg-white/10 transition">Download CV</a>
+            <Link to="/models" className="rounded-full bg-gradient-to-r from-neon-violet to-neon-magenta px-7 py-3 font-medium text-white shadow-lg shadow-neon-violet/25 hover:shadow-neon-violet/40 transition-shadow">View My Work</Link>
           </div>
           <Stats />
         </div>

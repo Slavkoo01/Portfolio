@@ -30,7 +30,7 @@ export default function Navbar() {
             )
           ))}
         </nav>
-        <Link to="/admin/login" className="glass rounded-full px-4 py-2 text-xs font-medium hover:bg-white/10 transition">Admin</Link>
+        <div className="w-16" />{/* spacer to balance the nav */}
       </div>
     </header>
   )
