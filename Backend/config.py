@@ -69,12 +69,12 @@ class BaseConfig:
     VIEW_RATE_LIMIT = int(os.getenv("VIEW_RATE_LIMIT", "120"))
     VIEW_RATE_WINDOW = int(os.getenv("VIEW_RATE_WINDOW", "60"))
 
-    # --- Future object storage (unused while STORAGE_BACKEND=local) ---
-    R2_ENDPOINT = os.getenv("R2_ENDPOINT", "")
-    R2_ACCESS_KEY = os.getenv("R2_ACCESS_KEY", "")
-    R2_SECRET_KEY = os.getenv("R2_SECRET_KEY", "")
+    # --- Cloudflare R2 object storage (used when STORAGE_BACKEND=r2) ---
+    R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID", "")
+    R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID", "")
+    R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY", "")
     R2_BUCKET = os.getenv("R2_BUCKET", "")
-    R2_PUBLIC_URL = os.getenv("R2_PUBLIC_URL", "")
+    R2_PUBLIC_BASE_URL = os.getenv("R2_PUBLIC_BASE_URL", "")
 
     TESTING = False
     DEBUG = False
@@ -99,6 +99,10 @@ class ProductionConfig(BaseConfig):
     DEBUG = False
     # Force-secure cookies in production; HTTPS is assumed.
     SESSION_COOKIE_SECURE = True
+    # Frontend and backend live on DIFFERENT domains (Cloudflare Pages vs
+    # Render), so cookies must be SameSite=None to cross sites. None REQUIRES
+    # Secure=True (already set above). Override via COOKIE_SAMESITE if needed.
+    SESSION_COOKIE_SAMESITE = os.getenv("COOKIE_SAMESITE", "None")
 
 
 _CONFIG_MAP = {
