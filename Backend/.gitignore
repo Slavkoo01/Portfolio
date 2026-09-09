@@ -16,7 +16,7 @@ env/
 !.env.example
 
 # Local file storage (uploaded binaries never go in git)
-storage/
+/storage/
 !storage/.gitkeep
 
 # IDE
