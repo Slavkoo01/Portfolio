@@ -13,6 +13,7 @@
 
 const CSRF_COOKIE = 'csrf_token'
 const CSRF_HEADER = 'X-CSRF-Token'
+const API_BASE = import.meta.env.VITE_API_BASE || ''
 
 function readCookie(name) {
   const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'))
@@ -22,7 +23,7 @@ function readCookie(name) {
 async function ensureCsrf() {
   let token = readCookie(CSRF_COOKIE)
   if (token) return token
-  await fetch('/api/auth/csrf', { credentials: 'include' })
+  await fetch(`${API_BASE}/api/auth/csrf`, { credentials: 'include' })
   return readCookie(CSRF_COOKIE)
 }
 
@@ -51,7 +52,7 @@ async function request(method, path, { body, isForm } = {}) {
     }
   }
 
-  const res = await fetch(path, opts)
+  const res = await fetch(`${API_BASE}${path}`, opts)
 
   let data = null
   const text = await res.text()
