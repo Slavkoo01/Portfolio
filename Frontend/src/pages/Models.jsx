@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { useGLTF, OrbitControls, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
-import { clone as SkeletonUtils } from 'three/examples/jsm/utils/SkeletonUtils.js'
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { api } from '../lib/api.js'
 import Navbar from '../components/Navbar.jsx'
 
