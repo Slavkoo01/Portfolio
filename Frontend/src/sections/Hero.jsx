@@ -19,8 +19,8 @@ export default function Hero() {
       {isMobile ? (
         /* ---------- MOBILE: static render image + stacked text ---------- */
         <div className="relative z-10 px-6 pt-28 pb-16 flex flex-col items-center text-center min-h-screen">
-          <Scene />
-          {/*<img src="/hero-render.png" alt="Floating island"
+          {/*<Scene />
+          <img src="/hero-render.png" alt="Floating island"
             className="w-full max-w-md rounded-2xl mb-8 animate-fade-up" style={{ opacity: 0, animationDelay: '0.1s' }} />*/}
           <p className="font-mono text-sm text-neon-ice mb-3 animate-fade-up" style={{ opacity: 0, animationDelay: '0.2s' }}>Hi, I'm</p>
           <h1 className="font-display text-5xl font-bold leading-[1.05] mb-3 animate-fade-up" style={{ opacity: 0, animationDelay: '0.3s' }}>{profile.name}</h1>

@@ -5,8 +5,8 @@ export const profile = {
 }
 export const stats = [
   { value: '20+', label: '3D Models' },
-  { value: '15+', label: 'Projects' },
-  { value: '5+', label: 'Years Experience' },
+  { value: '10+', label: 'Projects' },
+  { value: '1+', label: 'Years Experience' },
   { value: '10+', label: 'Technologies' },
 ]
 export const featured = [
