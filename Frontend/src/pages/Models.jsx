@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { useGLTF, OrbitControls, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
+import { clone as SkeletonUtils } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { api } from '../lib/api.js'
 import Navbar from '../components/Navbar.jsx'
 
@@ -277,12 +278,8 @@ function ThumbButton({ model, active, onClick }) {
 function PosedModel({ url, model, activeClip, onClips }) {
   const group = useRef()
   const { scene, animations } = useGLTF(url)
-  const cloned = useRef()
-  if (!cloned.current || cloned.current.__url !== url) {
-    cloned.current = scene.clone(true)
-    cloned.current.__url = url
-  }
-  const { actions, names } = useAnimations(animations, group)
+  const cloned = useMemo(() => SkeletonUtils.clone(scene), [scene])
+  const { actions, names } = useAnimations(animations, cloned)
 
   const clipsKey = names.join('|')
   useEffect(() => { onClips?.(names); /* eslint-disable-next-line */ }, [clipsKey])
@@ -303,7 +300,7 @@ function PosedModel({ url, model, activeClip, onClips }) {
     }
   }, [activeClip, actions])
 
-  return <group ref={group}><primitive object={cloned.current} /></group>
+  return <group ref={group}><primitive object={cloned} /></group>
 }
 
 function assetUrl(a) { return a.url || (a.storage_key ? `/files/${a.storage_key}` : null) }

@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { useGLTF, OrbitControls, useAnimations } from '@react-three/drei'
+import { clone as SkeletonUtils } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import * as THREE from 'three'
 import { api } from '../lib/api.js'
 import AdminLayout from './AdminLayout.jsx'
@@ -354,12 +355,8 @@ function ModelViewer({ url, form, activeClip, onClips }) {
 function PosedModel({ url, form, activeClip, onClips }) {
   const group = useRef()
   const { scene, animations } = useGLTF(url)
-  const cloned = useRef()
-  if (!cloned.current || cloned.current.__url !== url) {
-    cloned.current = scene.clone(true)
-    cloned.current.__url = url
-  }
-  const { actions, names } = useAnimations(animations, group)
+  const cloned = useMemo(() => SkeletonUtils.clone(scene), [scene])
+  const { actions, names } = useAnimations(animations, cloned)
 
   // report the discovered clip names up to the parent (for the buttons)
   const clipsKey = names.join('|')
@@ -385,7 +382,7 @@ function PosedModel({ url, form, activeClip, onClips }) {
     }
   }, [activeClip, actions])
 
-  return <group ref={group}><primitive object={cloned.current} /></group>
+  return <group ref={group}><primitive object={cloned} /></group>
 }
 
 /* ---------- Thumbnail (single, replaces) ---------- */
