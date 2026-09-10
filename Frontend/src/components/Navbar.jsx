@@ -23,9 +23,9 @@ export default function Navbar() {
   // close the mobile menu whenever the route changes
   useEffect(() => { setOpen(false) }, [location.pathname])
 
-  const linkFor = (item) => ROUTES[item]
-    ? <Link key={item} to={ROUTES[item]} className="text-sm text-white/70 hover:text-white transition-colors">{item}</Link>
-    : <a key={item} href={`#${item.toLowerCase().replace(/\s+/g, '-')}`} className="text-sm text-white/70 hover:text-white transition-colors">{item}</a>
+  const linkFor = (item, className = 'text-sm text-white/70 hover:text-white transition-colors') => ROUTES[item]
+    ? <Link key={item} to={ROUTES[item]} className={className}>{item}</Link>
+    : <a key={item} href={`#${item.toLowerCase().replace(/\s+/g, '-')}`} className={className}>{item}</a>
 
   return (
     <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled || open ? 'glass py-3' : 'py-5 bg-transparent'}`}>
@@ -34,7 +34,7 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          {nav.map(linkFor)}
+          {nav.map((item) => linkFor(item))}
         </nav>
 
         {/* Mobile hamburger */}
@@ -53,8 +53,8 @@ export default function Navbar() {
       {open && (
         <nav className="md:hidden mt-3 px-6 pb-4 flex flex-col gap-1">
           {nav.map((item) => (
-            <div key={item} className="py-2 border-b border-white/[0.06] last:border-0">
-              {linkFor(item)}
+            <div key={item} className="border-b border-white/[0.06] last:border-0">
+              {linkFor(item, 'block py-3 text-sm text-white/70 hover:text-white transition-colors')}
             </div>
           ))}
         </nav>
